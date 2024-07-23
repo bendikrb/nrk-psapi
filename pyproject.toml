@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "nrk-psapi"
+version = "0.0.0"
+description = ""
+authors = ["Bendik R. Brenne <bendik@konstant.no>"]
+license = "MIT"
+readme = "README.md"
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = [
+    "podcast",
+    "api-client",
+    "unofficial",
+]
+packages = [
+    { include = "nrk_psapi" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aiohttp = "^3.9.5"
+async-timeout = "^4.0.3"
+mashumaro = {extras = ["orjson"], version = "^3.13.1"}
+orjson = "^3.9.15"
+isodate = "^0.6.1"
+rich = "^13.7.1"
+rfeed = "^1.1.1"
+backoff = "^2.2.1"
+
+[tool.poetry.group.dev.dependencies]
+pylint = "3.0.2"
+ruff = "0.1.3"
+pytest = "^7.4.2"
+
+[tool.poetry.scripts]
+nrk = "nrk_psapi.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff.lint]
+ignore = [
+    "ARG001",
+    "A003", "ANN001", "ANN003", "ANN101", "ANN102", "ANN201", "ANN202", "ANN204", "ANN205", "ANN401",
+    "COM812", "COM819",
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "D202", "D203", "D205", "D206", "D213",
+    "E501", "EM101", "EM102",
+    "ERA001",
+    "FBT001", "FBT002", "FBT003",
+    "FIX002",
+    "G004",
+    "ISC001",
+    "PLR0913",
+    "PTH123",
+    "Q000", "Q001", "Q002", "Q003",
+    "RUF012",
+    "S101",
+    "SLOT000",
+    "TD003", "TID252", "TRY003", "TRY300",
+    "W191",
+]
+select = ["ALL"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "format",
+    "duplicate-code",
+    "used-before-assignment",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-few-public-methods",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+]
