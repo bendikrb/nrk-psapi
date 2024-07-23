@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 import json
 import socket
-from typing import Self
+from typing import Self, Any
 
 from aiohttp.client import ClientError, ClientSession
 from aiohttp.hdrs import METH_GET
@@ -24,7 +24,7 @@ from .exceptions import (
 from .models.catalog import Episode, Podcast, Series
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
-from .models.pages import Pages, Page
+from .models.pages import Pages, Page, IncludedSection
 from .models.playback import PodcastManifest
 from .models.search import PodcastSearchResponse, SingleLetter
 
@@ -35,7 +35,7 @@ from .utils import get_nested_items
 @dataclass
 class NrkPodcastAPI:
 
-    user_agent: str
+    user_agent: str | None = None
 
     request_timeout: int = 8
     session: ClientSession | None = None
@@ -219,7 +219,7 @@ class NrkPodcastAPI:
         result = await self._request(uri)
         return Page.from_dict(result)
 
-    async def curated_podcasts(self):
+    async def curated_podcasts(self) -> list[dict[str, Any]]:
         page = await self.radio_page(page_id="podcast")
         sections = [
             {
@@ -227,7 +227,8 @@ class NrkPodcastAPI:
                 "podcasts": [plug for plug in section.included.plugs if plug.type == "podcast"]
             }
             for section in page.sections
-            if len([plug for plug in section.included.plugs if plug.type == "podcast"]) > 1
+            if isinstance(section, IncludedSection)
+            and len([plug for plug in section.included.plugs if plug.type == "podcast"]) > 1
         ]
         return sections
 

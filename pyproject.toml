@@ -36,7 +36,6 @@ backoff = "^2.2.1"
 pylint = "3.0.2"
 ruff = "0.1.3"
 pytest = "^7.4.2"
-mypy = "1.11.0"
 
 [tool.poetry.scripts]
 nrk = "nrk_psapi.cli:main"
@@ -44,35 +43,6 @@ nrk = "nrk_psapi.cli:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-
-[tool.mypy]
-platform = "linux"
-python_version = "3.11"
-
-# show error messages from unrelated files
-follow_imports = "normal"
-
-# suppress errors about unsatisfied imports
-ignore_missing_imports = true
-
-# be strict
-check_untyped_defs = true
-disallow_any_generics = true
-disallow_incomplete_defs = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-no_implicit_reexport = true
-strict_optional = true
-warn_incomplete_stub = true
-warn_no_return = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unused_configs = true
-warn_unused_ignores = true
 
 [tool.ruff.lint]
 ignore = [
