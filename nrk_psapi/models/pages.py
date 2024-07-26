@@ -18,6 +18,7 @@ class DisplayType(str, Enum):
         return str(self.value)
 
 
+# noinspection SpellCheckingInspection
 class DisplayContract(str, Enum):
     HERO = 'hero'
     EDITORIAL = 'editorial'
@@ -565,3 +566,11 @@ class CuratedSection:
 @dataclass
 class Curated:
     sections: list[CuratedSection]
+
+    def get_section_by_id(self, section_id: str) -> CuratedSection | None:
+        """Return the CuratedSection with the given id."""
+
+        for section in self.sections:
+            if section.id == section_id:
+                return section
+        return None
