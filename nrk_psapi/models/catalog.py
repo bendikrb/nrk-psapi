@@ -1,15 +1,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: TCH003
+from typing import Literal
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
-from mashumaro.mixins.orjson import DataClassORJSONMixin
+
+from .common import BaseDataClassORJSONMixin
+
+
+def deserialize_embedded(data, ret_type: Literal["episodes", "seasons"]) -> list[Episode | Season]:
+    """Deserialize embedded episodes/seasons."""
+
+    if ret_type == "seasons" and "seasons" in data:
+        return [Season.from_dict(d) for d in data["seasons"]]
+    if ret_type == "episodes" and "episodes" in data:
+        return [Episode.from_dict(d) for d in data["episodes"]["_embedded"]["episodes"]]
+    return []
 
 
 @dataclass
-class Date(DataClassORJSONMixin):
+class Date(BaseDataClassORJSONMixin):
     """Represents a date with its value and display format."""
 
     date: datetime
@@ -17,7 +29,7 @@ class Date(DataClassORJSONMixin):
 
 
 @dataclass
-class GeoBlock(DataClassORJSONMixin):
+class GeoBlock(BaseDataClassORJSONMixin):
     """Represents geographical blocking information."""
 
     is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
@@ -25,7 +37,7 @@ class GeoBlock(DataClassORJSONMixin):
 
 
 @dataclass
-class UsageRights(DataClassORJSONMixin):
+class UsageRights(BaseDataClassORJSONMixin):
     """Contains information about usage rights and availability."""
 
     _from: Date = field(metadata=field_options(alias="from"))
@@ -34,7 +46,7 @@ class UsageRights(DataClassORJSONMixin):
 
 
 @dataclass
-class Availability(DataClassORJSONMixin):
+class Availability(BaseDataClassORJSONMixin):
     """Represents the availability status of an episode."""
 
     status: str
@@ -42,7 +54,7 @@ class Availability(DataClassORJSONMixin):
 
 
 @dataclass
-class Category(DataClassORJSONMixin):
+class Category(BaseDataClassORJSONMixin):
     """Represents a category with its ID and name."""
 
     id: str
@@ -51,15 +63,15 @@ class Category(DataClassORJSONMixin):
 
 
 @dataclass
-class Titles(DataClassORJSONMixin):
+class Titles(BaseDataClassORJSONMixin):
     """Contains title information for an episode."""
 
     title: str
-    subtitle: str
+    subtitle: str | None = None
 
 
 @dataclass
-class Episode(DataClassORJSONMixin):
+class Episode(BaseDataClassORJSONMixin):
     """Represents a podcast episode."""
 
     _links: Links
@@ -80,20 +92,35 @@ class Episode(DataClassORJSONMixin):
 
 
 @dataclass
-class EpisodesResponse(DataClassORJSONMixin):
-    """Contains a list of embedded episodes."""
+class Season(BaseDataClassORJSONMixin):
+    """Represents a podcast season."""
 
     _links: Links
-    series_type: str = field(metadata=field_options(alias="seriesType"))
-    episodes: list[Episode] = field(
-        metadata=field_options(
-            alias="_embedded",
-            deserialize=lambda x: x["episodes"]["_embedded"]["episodes"],
-        ))
+    id: str
+    titles: Titles
+    has_available_episodes: bool = field(metadata=field_options(alias="hasAvailableEpisodes"))
+    episode_count: int = field(metadata=field_options(alias="episodeCount"))
+    episodes: EpisodesResponse
+    image: list[Image]
+    square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
+    backdrop_image: list[Image] = field(metadata=field_options(alias="backdropImage"))
 
 
 @dataclass
-class PodcastSeries(DataClassORJSONMixin):
+class EpisodesResponse(BaseDataClassORJSONMixin):
+    """Contains a list of embedded episodes."""
+
+    _links: Links
+    episodes: list[Episode] = field(
+        metadata=field_options(
+            alias="_embedded",
+            deserialize=lambda x: x["episodes"],
+        ))
+    series_type: str | None = field(default=None, metadata=field_options(alias="seriesType"))
+
+
+@dataclass
+class PodcastSeries(BaseDataClassORJSONMixin):
     id: str
     titles: Titles
     category: Category
@@ -104,7 +131,7 @@ class PodcastSeries(DataClassORJSONMixin):
 
 
 @dataclass
-class Podcast(DataClassORJSONMixin):
+class Podcast(BaseDataClassORJSONMixin):
     """Represents the main structure of the API response."""
 
     _links: Links
@@ -114,14 +141,22 @@ class Podcast(DataClassORJSONMixin):
     series: PodcastSeries
 
     episodes: list[Episode] = field(
+        default_factory=list,
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: x["episodes"]["_embedded"]["episodes"],
+            deserialize=lambda x: deserialize_embedded(x, "episodes"),
+        ))
+
+    seasons: list[Season] = field(
+        default_factory=list,
+        metadata=field_options(
+            alias="_embedded",
+            deserialize=lambda x: deserialize_embedded(x, "seasons"),
         ))
 
 
 @dataclass
-class Link(DataClassORJSONMixin):
+class Link(BaseDataClassORJSONMixin):
     """Represents a hyperlink in the API response."""
 
     href: str
@@ -131,7 +166,7 @@ class Link(DataClassORJSONMixin):
 
 
 @dataclass
-class Links(DataClassORJSONMixin):
+class Links(BaseDataClassORJSONMixin):
     """Contains all the hyperlinks in the API response."""
 
     self: Link | None = None
@@ -157,7 +192,7 @@ class Links(DataClassORJSONMixin):
 
 
 @dataclass
-class ProgramInformationDetails(DataClassORJSONMixin):
+class ProgramInformationDetails(BaseDataClassORJSONMixin):
     """Contains program information details."""
 
     display_value: str = field(metadata=field_options(alias="displayValue"))
@@ -165,7 +200,7 @@ class ProgramInformationDetails(DataClassORJSONMixin):
 
 
 @dataclass
-class ProgramInformation(DataClassORJSONMixin):
+class ProgramInformation(BaseDataClassORJSONMixin):
     """Contains program information."""
 
     details: ProgramInformationDetails
@@ -173,7 +208,7 @@ class ProgramInformation(DataClassORJSONMixin):
 
 
 @dataclass
-class Contributor(DataClassORJSONMixin):
+class Contributor(BaseDataClassORJSONMixin):
     """Represents a contributor to the episode."""
 
     role: str
@@ -181,7 +216,7 @@ class Contributor(DataClassORJSONMixin):
 
 
 @dataclass
-class Image(DataClassORJSONMixin):
+class Image(BaseDataClassORJSONMixin):
     """Represents an image with its URL and width."""
 
     url: str = field(metadata=field_options(alias="uri"))
@@ -190,7 +225,7 @@ class Image(DataClassORJSONMixin):
 
 
 @dataclass
-class Duration(DataClassORJSONMixin):
+class Duration(BaseDataClassORJSONMixin):
     """Represents the duration of the episode in various formats."""
 
     seconds: int
@@ -199,7 +234,7 @@ class Duration(DataClassORJSONMixin):
 
 
 @dataclass
-class IndexPoint(DataClassORJSONMixin):
+class IndexPoint(BaseDataClassORJSONMixin):
     """Represents a point of interest within the episode."""
 
     title: str
@@ -212,7 +247,7 @@ class IndexPoint(DataClassORJSONMixin):
 
 
 @dataclass
-class Series(DataClassORJSONMixin):
+class Series(BaseDataClassORJSONMixin):
     _links: Links
     id: str
     series_id: str = field(metadata=field_options(alias="seriesId"))

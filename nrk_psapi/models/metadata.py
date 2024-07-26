@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: TCH003
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
-from mashumaro.mixins.orjson import DataClassORJSONMixin
 
-from .catalog import Image, IndexPoint, Link, Links, Titles
-from .playback import Playable
+from .catalog import Image, IndexPoint, Link, Links, Titles  # noqa: TCH001
+from .common import BaseDataClassORJSONMixin
+from .playback import Playable  # noqa: TCH001
 
 
 @dataclass
-class LegalAgeRating(DataClassORJSONMixin):
+class LegalAgeRating(BaseDataClassORJSONMixin):
     """Represents the rating information for legal age."""
 
     code: str
@@ -21,7 +21,7 @@ class LegalAgeRating(DataClassORJSONMixin):
 
 
 @dataclass
-class LegalAgeBody(DataClassORJSONMixin):
+class LegalAgeBody(BaseDataClassORJSONMixin):
     """Represents the body of legal age information."""
 
     status: str
@@ -29,7 +29,7 @@ class LegalAgeBody(DataClassORJSONMixin):
 
 
 @dataclass
-class LegalAge(DataClassORJSONMixin):
+class LegalAge(BaseDataClassORJSONMixin):
     """Represents the legal age information."""
 
     legal_reference: str = field(metadata=field_options(alias="legalReference"))
@@ -37,7 +37,7 @@ class LegalAge(DataClassORJSONMixin):
 
 
 @dataclass
-class OnDemand(DataClassORJSONMixin):
+class OnDemand(BaseDataClassORJSONMixin):
     """Represents the on demand information."""
 
     _from: datetime = field(metadata=field_options(alias="from"))
@@ -45,7 +45,7 @@ class OnDemand(DataClassORJSONMixin):
     has_rights_now: bool = field(metadata=field_options(alias="hasRightsNow"))
 
 @dataclass
-class Availability(DataClassORJSONMixin):
+class Availability(BaseDataClassORJSONMixin):
     """Represents the availability information."""
 
     information: str
@@ -55,14 +55,14 @@ class Availability(DataClassORJSONMixin):
     live: dict[str, str] | None = None
 
 @dataclass
-class Poster(DataClassORJSONMixin):
+class Poster(BaseDataClassORJSONMixin):
     """Represents a poster with multiple image sizes."""
 
     images: list[Image]
 
 
 @dataclass
-class Preplay(DataClassORJSONMixin):
+class Preplay(BaseDataClassORJSONMixin):
     """Represents the preplay information."""
 
     titles: Titles
@@ -73,7 +73,7 @@ class Preplay(DataClassORJSONMixin):
 
 
 @dataclass
-class Manifest(DataClassORJSONMixin):
+class Manifest(BaseDataClassORJSONMixin):
     """Represents a manifest in the _embedded section."""
 
     _links: Links
@@ -82,7 +82,7 @@ class Manifest(DataClassORJSONMixin):
 
 
 @dataclass
-class Podcast(DataClassORJSONMixin):
+class Podcast(BaseDataClassORJSONMixin):
     """Represents the podcast information in the _embedded section."""
 
     _links: dict[str, Link]
@@ -93,14 +93,14 @@ class Podcast(DataClassORJSONMixin):
 
 
 @dataclass
-class PodcastEpisode(DataClassORJSONMixin):
+class PodcastEpisode(BaseDataClassORJSONMixin):
     """Represents the podcast episode information in the _embedded section."""
 
     clip_id: str | None = field(default=None, metadata=field_options(alias="clipId"))
 
 
 @dataclass
-class Embedded(DataClassORJSONMixin):
+class Embedded(BaseDataClassORJSONMixin):
     """Represents the _embedded section in the API response."""
 
     manifests: list[Manifest]
@@ -111,7 +111,7 @@ class Embedded(DataClassORJSONMixin):
 
 
 @dataclass
-class PodcastMetadata(DataClassORJSONMixin):
+class PodcastMetadata(BaseDataClassORJSONMixin):
     """Represents the main structure of the API response for podcast metadata."""
 
     _links: Links

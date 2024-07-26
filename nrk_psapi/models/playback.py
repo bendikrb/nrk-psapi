@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: TCH003
 from enum import Enum
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
-from mashumaro.mixins.orjson import DataClassORJSONMixin
 
-from nrk_psapi.models.common import DisplayAspectRatioVideo
+from .common import BaseDataClassORJSONMixin, DisplayAspectRatioVideo
 
 
 class PlayableSourceMedium(str, Enum):
@@ -28,7 +27,7 @@ class PlayableStreamingMode(str, Enum):
 
 
 @dataclass
-class Link(DataClassORJSONMixin):
+class Link(BaseDataClassORJSONMixin):
     """Represents a link in the API response."""
 
     href: str
@@ -36,7 +35,7 @@ class Link(DataClassORJSONMixin):
 
 
 @dataclass
-class Links(DataClassORJSONMixin):
+class Links(BaseDataClassORJSONMixin):
     """Represents the _links object in the API response."""
 
     self: Link
@@ -44,7 +43,7 @@ class Links(DataClassORJSONMixin):
 
 
 @dataclass
-class OnDemand(DataClassORJSONMixin):
+class OnDemand(BaseDataClassORJSONMixin):
     """Represents the onDemand object in the availability section."""
 
     _from: datetime = field(metadata=field_options(alias="from"))
@@ -53,7 +52,7 @@ class OnDemand(DataClassORJSONMixin):
 
 
 @dataclass
-class Availability(DataClassORJSONMixin):
+class Availability(BaseDataClassORJSONMixin):
     """Represents the availability information for the podcast."""
 
     information: str
@@ -64,7 +63,7 @@ class Availability(DataClassORJSONMixin):
 
 
 @dataclass
-class GaStatistics(DataClassORJSONMixin):
+class GaStatistics(BaseDataClassORJSONMixin):
     """Represents Google Analytics dimension data."""
 
     dimension1: str
@@ -83,14 +82,14 @@ class GaStatistics(DataClassORJSONMixin):
 
 
 @dataclass
-class LunaConfig(DataClassORJSONMixin):
+class LunaConfig(BaseDataClassORJSONMixin):
     """Represents the Luna configuration."""
 
     beacon: str
 
 
 @dataclass
-class LunaData(DataClassORJSONMixin):
+class LunaData(BaseDataClassORJSONMixin):
     """Represents the Luna data."""
 
     title: str
@@ -102,7 +101,7 @@ class LunaData(DataClassORJSONMixin):
 
 
 @dataclass
-class Luna(DataClassORJSONMixin):
+class Luna(BaseDataClassORJSONMixin):
     """Represents the Luna statistics."""
 
     config: LunaConfig
@@ -110,7 +109,7 @@ class Luna(DataClassORJSONMixin):
 
 
 @dataclass
-class QualityOfExperience(DataClassORJSONMixin):
+class QualityOfExperience(BaseDataClassORJSONMixin):
     """Represents quality of experience statistics."""
 
     client_name: str = field(metadata=field_options(alias="clientName"))
@@ -122,7 +121,7 @@ class QualityOfExperience(DataClassORJSONMixin):
 
 
 @dataclass
-class Statistics(DataClassORJSONMixin):
+class Statistics(BaseDataClassORJSONMixin):
     """Represents various statistics for the podcast."""
 
     scores: dict | None = None
@@ -135,7 +134,7 @@ class Statistics(DataClassORJSONMixin):
 
 
 @dataclass
-class Asset(DataClassORJSONMixin):
+class Asset(BaseDataClassORJSONMixin):
     """Represents an asset in the playable content."""
 
     url: str
@@ -145,7 +144,7 @@ class Asset(DataClassORJSONMixin):
 
 
 @dataclass
-class Playable(DataClassORJSONMixin):
+class Playable(BaseDataClassORJSONMixin):
     """Represents the playable content information."""
 
     end_sequence_start_time: str | None = field(default=None, metadata=field_options(alias="endSequenceStartTime"))
@@ -161,7 +160,7 @@ class Playable(DataClassORJSONMixin):
 
 
 @dataclass
-class SkipDialogInfo(DataClassORJSONMixin):
+class SkipDialogInfo(BaseDataClassORJSONMixin):
     start_intro_in_seconds: float = field(metadata=field_options(alias="startIntroInSeconds"))
     end_intro_in_seconds: float = field(metadata=field_options(alias="endIntroInSeconds"))
     start_credits_in_seconds: float = field(metadata=field_options(alias="startCreditsInSeconds"))
@@ -171,7 +170,7 @@ class SkipDialogInfo(DataClassORJSONMixin):
 
 
 @dataclass
-class PodcastManifest(DataClassORJSONMixin):
+class PodcastManifest(BaseDataClassORJSONMixin):
     """Represents the main structure of the podcast manifest."""
 
     _links: Links

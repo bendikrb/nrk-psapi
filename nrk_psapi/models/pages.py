@@ -51,7 +51,7 @@ class PageTypeEnum(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
 
-
+@dataclass
 class BaseDataClassORJSONMixin(DataClassORJSONMixin):
     class Config(BaseConfig):
         omit_none = True

@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from mashumaro import field_options
-from mashumaro.mixins.orjson import DataClassORJSONMixin
+
+from .common import BaseDataClassORJSONMixin
 
 SingleLetter = Literal[
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
@@ -13,14 +14,14 @@ SingleLetter = Literal[
 
 
 @dataclass
-class Link(DataClassORJSONMixin):
+class Link(BaseDataClassORJSONMixin):
     """Represents a link in the API response."""
 
     href: str
 
 
 @dataclass
-class SearchResultLink(DataClassORJSONMixin):
+class SearchResultLink(BaseDataClassORJSONMixin):
     """Represents a link in the API search response."""
 
     next: str | None = None
@@ -28,7 +29,7 @@ class SearchResultLink(DataClassORJSONMixin):
 
 
 @dataclass
-class Links(DataClassORJSONMixin):
+class Links(BaseDataClassORJSONMixin):
     """Represents the _links object in the API response."""
 
     next_letter: Link | None = field(default=None, metadata=field_options(alias="nextLetter"))
@@ -40,7 +41,7 @@ class Links(DataClassORJSONMixin):
 
 
 @dataclass
-class Letter(DataClassORJSONMixin):
+class Letter(BaseDataClassORJSONMixin):
     """Represents a letter object in the letters array."""
 
     letter: SingleLetter
@@ -49,7 +50,7 @@ class Letter(DataClassORJSONMixin):
 
 
 @dataclass
-class Image(DataClassORJSONMixin):
+class Image(BaseDataClassORJSONMixin):
     """Represents an image object in the images or squareImages arrays."""
 
     uri: str
@@ -57,7 +58,7 @@ class Image(DataClassORJSONMixin):
 
 
 @dataclass
-class Series(DataClassORJSONMixin):
+class Series(BaseDataClassORJSONMixin):
     """Represents a series object in the series array."""
 
     id: str
@@ -72,7 +73,7 @@ class Series(DataClassORJSONMixin):
 
 
 @dataclass
-class PodcastSearchResponse(DataClassORJSONMixin):
+class PodcastSearchResponse(BaseDataClassORJSONMixin):
     """Represents the main response object from the podcast search API."""
 
     _links: Links
@@ -83,7 +84,7 @@ class PodcastSearchResponse(DataClassORJSONMixin):
 
 
 @dataclass
-class SearchResponseCounts(DataClassORJSONMixin):
+class SearchResponseCounts(BaseDataClassORJSONMixin):
     """Represents the counts object in the main response object from the podcast search API."""
 
     all: int
@@ -96,7 +97,7 @@ class SearchResponseCounts(DataClassORJSONMixin):
 
 
 @dataclass
-class SearchResponseResultsResult(DataClassORJSONMixin):
+class SearchResponseResultsResult(BaseDataClassORJSONMixin):
     """Represents the result object in the results array in the main response object from the podcast search API."""
 
     results: list[dict]
@@ -104,7 +105,7 @@ class SearchResponseResultsResult(DataClassORJSONMixin):
 
 
 @dataclass
-class SearchResponseResults(DataClassORJSONMixin):
+class SearchResponseResults(BaseDataClassORJSONMixin):
     """Represents the results object in the main response object from the podcast search API."""
 
     channels: SearchResponseResultsResult
@@ -116,7 +117,7 @@ class SearchResponseResults(DataClassORJSONMixin):
 
 
 @dataclass
-class SearchResponse(DataClassORJSONMixin):
+class SearchResponse(BaseDataClassORJSONMixin):
     """Represents the main response object from the podcast search API."""
 
     count: int
