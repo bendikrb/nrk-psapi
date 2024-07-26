@@ -178,6 +178,10 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}")
         return Podcast.from_dict(result)
 
+    async def get_podcasts(self, podcast_ids: list[str]) -> list[Podcast]:
+        results: list[Podcast] = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
+        return results
+
     async def get_podcast_episodes(self, podcast_id: str) -> list[Episode]:
         result = await self._request_paged_all(
             f"radio/catalog/podcast/{podcast_id}/episodes",

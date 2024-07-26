@@ -22,8 +22,8 @@ def main_parser() -> argparse.ArgumentParser:
     get_podcasts_parser = subparsers.add_parser('get_all_podcasts', description='Get all podcasts.')
     get_podcasts_parser.set_defaults(func=get_all_podcasts)
 
-    get_podcast_parser = subparsers.add_parser('get_podcast', description='Get podcast.')
-    get_podcast_parser.add_argument('podcast_id', type=str, help='The podcast id.')
+    get_podcast_parser = subparsers.add_parser('get_podcast', description='Get podcast(s).')
+    get_podcast_parser.add_argument('podcast_id', type=str, nargs="+", help='The podcast id(s).')
     get_podcast_parser.set_defaults(func=get_podcast)
 
     get_episode_parser = subparsers.add_parser('get_episode', description='Get episode.')
@@ -53,10 +53,11 @@ async def get_all_podcasts():
 
 
 async def get_podcast(args):
-    """Get podcast."""
+    """Get podcast(s)."""
     async with NrkPodcastAPI() as client:
-        podcast = await client.get_podcast(args.podcast_id)
-        rprint(podcast)
+        podcasts = await client.get_podcasts(args.podcast_id)
+        for podcast in podcasts:
+            rprint(podcast)
 
 
 async def get_episode(args):
