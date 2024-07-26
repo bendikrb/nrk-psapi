@@ -1,6 +1,6 @@
 """nrk-psapi models."""
 
-from .catalog import Podcast, Episode
+from .catalog import Episode, Podcast
 
 __all__ = [
     "Podcast",

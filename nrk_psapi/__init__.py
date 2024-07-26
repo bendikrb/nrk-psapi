@@ -3,7 +3,7 @@
 from .api import NrkPodcastAPI
 from .exceptions import NrkPsApiError
 from .models.catalog import Episode, Podcast, Series
-from .models.playback import PodcastManifest, Playable, Asset
+from .models.playback import Asset, Playable
 
 __all__ = [
     "NrkPodcastAPI",

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 import json
 import socket
-from typing import Self, Any
+from typing import Self
 
 from aiohttp.client import ClientError, ClientSession
 from aiohttp.hdrs import METH_GET
@@ -24,12 +24,18 @@ from .exceptions import (
 from .models.catalog import Episode, Podcast, Series
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
-from .models.pages import Pages, Page, IncludedSection
+from .models.pages import (
+    Curated,
+    CuratedPodcast,
+    CuratedSection,
+    IncludedSection,
+    Page,
+    Pages,
+    PodcastPlug,
+)
 from .models.playback import PodcastManifest
 from .models.search import PodcastSearchResponse, SingleLetter
-
-from .utils import get_nested_items
-
+from .utils import get_nested_items, sanitize_string
 
 
 @dataclass
@@ -154,7 +160,7 @@ class NrkPodcastAPI:
 
     async def ipcheck(self) -> IpCheck:
         result = await self._request("ipcheck")
-        return IpCheck.from_dict(result)
+        return IpCheck.from_dict(result["data"])
 
     async def get_playback_manifest(self, episode_id: str) -> PodcastManifest:
         result = await self._request(f"playback/manifest/{episode_id}")
@@ -219,18 +225,29 @@ class NrkPodcastAPI:
         result = await self._request(uri)
         return Page.from_dict(result)
 
-    async def curated_podcasts(self) -> list[dict[str, Any]]:
+    async def curated_podcasts(self) -> Curated:
         page = await self.radio_page(page_id="podcast")
-        sections = [
-            {
-                "title": section.included.title,
-                "podcasts": [plug for plug in section.included.plugs if plug.type == "podcast"]
-            }
-            for section in page.sections
-            if isinstance(section, IncludedSection)
-            and len([plug for plug in section.included.plugs if plug.type == "podcast"]) > 1
-        ]
-        return sections
+        sections = []
+        for section in page.sections:
+            if isinstance(section, IncludedSection):
+                podcasts = [
+                    CuratedPodcast(
+                            id=plug.id,
+                            title=plug.title,
+                            subtitle=plug.tagline,
+                            image=plug.podcast.image_url,
+                            number_of_episodes=plug.podcast.number_of_episodes,
+                    )
+                    for plug in section.included.plugs
+                    if isinstance(plug, PodcastPlug)
+                ]
+                if len(podcasts) > 1:
+                    sections.append(CuratedSection(
+                        id=sanitize_string(section.included.title),
+                        title=section.included.title,
+                        podcasts=podcasts,
+                    ))
+        return Curated(sections=sections)
 
     async def close(self) -> None:
         """Close open client session."""

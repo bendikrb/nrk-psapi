@@ -36,9 +36,11 @@ def main_parser() -> argparse.ArgumentParser:
     get_episode_manifest_parser.set_defaults(func=get_manifest)
 
     get_episode_metadata_parser = subparsers.add_parser('get_episode_metadata', description='Get episode metadata.')
-    get_episode_metadata_parser.add_argument('podcast_id', type=str, help='The podcast id.')
     get_episode_metadata_parser.add_argument('episode_id', type=str, help='The episode id.')
     get_episode_metadata_parser.set_defaults(func=get_metadata)
+
+    get_curated_podcasts_parser = subparsers.add_parser('get_curated_podcasts', description='Get curated podcasts.')
+    get_curated_podcasts_parser.set_defaults(func=get_curated_podcasts)
 
     return parser
 
@@ -74,8 +76,18 @@ async def get_manifest(args):
 async def get_metadata(args):
     """Get metadata."""
     async with NrkPodcastAPI() as client:
-        metadata = await client.get_playback_metadata(args.podcast_id, args.episode_id)
+        metadata = await client.get_playback_metadata(args.episode_id)
         rprint(metadata)
+
+
+async def get_curated_podcasts(args):
+    """Get curated podcasts."""
+    async with NrkPodcastAPI() as client:
+        curated = await client.curated_podcasts()
+        for section in curated.sections:
+            rprint(f"# {section.title}")
+            for podcast in section.podcasts:
+                rprint(f"  - {podcast.title} ({podcast.id})")
 
 
 def main():

@@ -7,6 +7,7 @@ from typing import Literal
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.orjson import DataClassORJSONMixin
+from mashumaro.types import Discriminator
 
 
 class DisplayType(str, Enum):
@@ -218,8 +219,26 @@ class Image(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PlaceholderSection(BaseDataClassORJSONMixin):
-    type: Literal["placeholder"]
+class Plug(BaseDataClassORJSONMixin):
+    class Config(BaseConfig):
+        discriminator = Discriminator(
+            field="type",
+            include_subtypes=True,
+        )
+
+
+@dataclass
+class Section(BaseDataClassORJSONMixin):
+    class Config(BaseConfig):
+        discriminator = Discriminator(
+            field="type",
+            include_subtypes=True,
+        )
+
+
+@dataclass
+class PlaceholderSection(Section):
+    type = "placeholder"
     placeholder: Placeholder
     id: str | None = None
     e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
@@ -273,8 +292,12 @@ class Podcast(BaseDataClassORJSONMixin):
     podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
     image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
-    podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
+    # podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
     titles: Titles | None = None
+
+    @property
+    def podcast_title(self):
+        return self.titles.title
 
 
 @dataclass
@@ -330,8 +353,8 @@ class Pages(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class ChannelPlug(BaseDataClassORJSONMixin):
-    type: Literal["channel"]
+class ChannelPlug(Plug):
+    type = "channel"
     channel: Channel
     id: str | None = None
     image: Image | None = None
@@ -345,8 +368,8 @@ class ChannelPlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class SeriesPlug(BaseDataClassORJSONMixin):
-    type: Literal["series"]
+class SeriesPlug(Plug):
+    type = "series"
     series: Series
     id: str | None = None
     image: Image | None = None
@@ -360,8 +383,8 @@ class SeriesPlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class EpisodePlug(BaseDataClassORJSONMixin):
-    type: Literal["episode"]
+class EpisodePlug(Plug):
+    type = "episode"
     episode: Episode
     id: str | None = None
     image: Image | None = None
@@ -375,8 +398,8 @@ class EpisodePlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class StandaloneProgramPlug(BaseDataClassORJSONMixin):
-    type: Literal["standaloneProgram"]
+class StandaloneProgramPlug(Plug):
+    type = "standaloneProgram"
     standalone_program: StandaloneProgram = field(metadata=field_options(alias="standaloneProgram"))
     hid: str | None = None
     image: Image | None = None
@@ -390,28 +413,40 @@ class StandaloneProgramPlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PodcastPlug(BaseDataClassORJSONMixin):
-    type: Literal["podcast"]
+class PodcastPlug(Plug):
+    type = "podcast"
     podcast: Podcast
     _links: PodcastLinks
-    id: str | None = None
+    # id: str | None = None
     image: Image | None = None
     e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
     analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
+    # title: str | None = None
+    # tagline: str | None = None
     description: str | None = None
     accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
     backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
 
     @property
+    def id(self):
+        return self._links.podcast.split("/").pop()
+
+    @property
     def links(self):
         return self._links
 
+    @property
+    def title(self):
+        return self.podcast.podcast_title
+
+    @property
+    def tagline(self):
+        return self.podcast.titles.subtitle
+
 
 @dataclass
-class PodcastEpisodePlug(BaseDataClassORJSONMixin):
-    type: Literal["podcastEpisode"]
+class PodcastEpisodePlug(Plug):
+    type = "podcastEpisode"
     podcast_episode: PodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
     _links: PodcastEpisodeLinks
     id: str | None = None
@@ -430,9 +465,9 @@ class PodcastEpisodePlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PodcastSeasonPlug(BaseDataClassORJSONMixin):
+class PodcastSeasonPlug(Plug):
+    type = "podcastSeason"
     id: str
-    type: Literal["podcastEpisode"]
     podcast_season: PodcastSeason = field(metadata=field_options(alias="podcastSeason"))
     image: Image | None = None
     e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
@@ -445,8 +480,8 @@ class PodcastSeasonPlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class LinkPlug(BaseDataClassORJSONMixin):
-    type: Literal["link"]
+class LinkPlug(Plug):
+    type = "link"
     link: LinkPlugInner
     id: str | None = None
     image: Image | None = None
@@ -460,8 +495,8 @@ class LinkPlug(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PagePlug(BaseDataClassORJSONMixin):
-    type: Literal["page"]
+class PagePlug(Plug):
+    type = "page"
     page: PagePlugInner
     id: str | None = None
     image: Image | None = None
@@ -476,15 +511,7 @@ class PagePlug(BaseDataClassORJSONMixin):
 
 @dataclass
 class Included(BaseDataClassORJSONMixin):
-    plugs: list[SeriesPlug |
-                EpisodePlug |
-                StandaloneProgramPlug |
-                ChannelPlug |
-                PodcastEpisodePlug |
-                PodcastPlug |
-                PodcastSeasonPlug |
-                LinkPlug |
-                PagePlug]
+    plugs: list[Plug]
     count: int | None = None
     display_contract: DisplayContract | None = field(default=None, metadata=field_options(alias="displayContract"))
     plug_size: PlugSize | None = field(default=None, metadata=field_options(alias="plugSize"))
@@ -492,8 +519,8 @@ class Included(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class IncludedSection(BaseDataClassORJSONMixin):
-    type: Literal["included"]
+class IncludedSection(Section):
+    type = "included"
     included: Included
     id: str | None = None
     e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
@@ -502,7 +529,7 @@ class IncludedSection(BaseDataClassORJSONMixin):
 @dataclass
 class Page(BaseDataClassORJSONMixin):
     title: str
-    sections: list[IncludedSection | PlaceholderSection]
+    sections: list[Section]
     _links: PageLinks
     id: str | None = None
     buttons: list[ButtonItem] | None = None
@@ -517,3 +544,24 @@ class Page(BaseDataClassORJSONMixin):
     page_version: str | None = field(default=None, metadata=field_options(alias="pageVersion"))
     recommendation_id: str | None = field(default=None, metadata=field_options(alias="recommendationId"))
     back_button: ButtonItem | None = field(default=None, metadata=field_options(alias="backButton"))
+
+
+@dataclass
+class CuratedPodcast:
+    id: str
+    title: str
+    subtitle: str
+    image: str
+    number_of_episodes: int
+
+
+@dataclass
+class CuratedSection:
+    id: str
+    title: str
+    podcasts: list[CuratedPodcast]
+
+
+@dataclass
+class Curated:
+    sections: list[CuratedSection]
