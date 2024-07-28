@@ -21,7 +21,7 @@ from .exceptions import (
     NrkPsApiError,
     NrkPsApiRateLimitError,
 )
-from .models.catalog import Episode, Podcast, Series
+from .models.catalog import Episode, Podcast, Season, Series
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
 from .models.pages import (
@@ -179,12 +179,20 @@ class NrkPodcastAPI:
         return Podcast.from_dict(result)
 
     async def get_podcasts(self, podcast_ids: list[str]) -> list[Podcast]:
-        results: list[Podcast] = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
-        return results
+        results = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
+        return list(results)
 
-    async def get_podcast_episodes(self, podcast_id: str) -> list[Episode]:
+    async def get_podcast_season(self, podcast_id: str, season_id: str):
+        result = await self._request(f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}")
+        return Season.from_dict(result)
+
+    async def get_podcast_episodes(self, podcast_id: str, season_id: str | None = None) -> list[Episode]:
+        if season_id is not None:
+            uri = f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}/episodes"
+        else:
+            uri = f"radio/catalog/podcast/{podcast_id}/episodes"
         result = await self._request_paged_all(
-            f"radio/catalog/podcast/{podcast_id}/episodes",
+            uri,
             items_key="_embedded.episodes",
         )
         return [Episode.from_dict(e) for e in result]

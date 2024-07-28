@@ -26,6 +26,16 @@ def main_parser() -> argparse.ArgumentParser:
     get_podcast_parser.add_argument('podcast_id', type=str, nargs="+", help='The podcast id(s).')
     get_podcast_parser.set_defaults(func=get_podcast)
 
+    get_podcast_season_parser = subparsers.add_parser('get_podcast_season', description='Get podcast season.')
+    get_podcast_season_parser.add_argument('podcast_id', type=str, help='The podcast id.')
+    get_podcast_season_parser.add_argument('season_id', type=str, help='The season id.')
+    get_podcast_season_parser.set_defaults(func=get_podcast_season)
+
+    get_podcast_episodes_parser = subparsers.add_parser('get_podcast_episodes', description='Get podcast episodes.')
+    get_podcast_episodes_parser.add_argument('podcast_id', type=str, help='The podcast id.')
+    get_podcast_episodes_parser.add_argument('--season_id', type=str, required=False, help='The season id.')
+    get_podcast_episodes_parser.set_defaults(func=get_podcast_episodes)
+
     get_episode_parser = subparsers.add_parser('get_episode', description='Get episode.')
     get_episode_parser.add_argument('podcast_id', type=str, help='The podcast id.')
     get_episode_parser.add_argument('episode_id', type=str, help='The episode id.')
@@ -58,6 +68,21 @@ async def get_podcast(args):
         podcasts = await client.get_podcasts(args.podcast_id)
         for podcast in podcasts:
             rprint(podcast)
+
+
+async def get_podcast_season(args):
+    """Get podcast season."""
+    async with NrkPodcastAPI() as client:
+        season = await client.get_podcast_season(args.podcast_id, args.season_id)
+        rprint(season)
+
+
+async def get_podcast_episodes(args):
+    """Get podcast episodes."""
+    async with NrkPodcastAPI() as client:
+        episodes = await client.get_podcast_episodes(args.podcast_id, args.season_id)
+        for episode in episodes:
+            rprint(episode)
 
 
 async def get_episode(args):

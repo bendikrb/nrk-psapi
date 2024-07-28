@@ -2,22 +2,41 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta  # noqa: TCH003
-from typing import Literal
+from enum import Enum
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
+from mashumaro.config import BaseConfig
+from mashumaro.types import Discriminator
 
 from .common import BaseDataClassORJSONMixin
 
 
-def deserialize_embedded(data, ret_type: Literal["episodes", "seasons"]) -> list[Episode | Season]:
-    """Deserialize embedded episodes/seasons."""
+class PodcastType(str, Enum):
+    PODCAST = "podcast"
+    CUSTOM_SEASON = "customSeason"
 
-    if ret_type == "seasons" and "seasons" in data:
-        return [Season.from_dict(d) for d in data["seasons"]]
-    if ret_type == "episodes" and "episodes" in data:
-        return [Episode.from_dict(d) for d in data["episodes"]["_embedded"]["episodes"]]
-    return []
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+class SeriesType(str, Enum):
+    UMBRELLA = "umbrella"
+    STANDARD = "standard"
+    SEQUENTIAL = "sequential"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+class SeasonDisplayType(str, Enum):
+    MANUAL = "manual"
+    NUMBER = "number"
+    MONTH = "month"
+    YEAR = "year"
+
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 @dataclass
@@ -92,18 +111,38 @@ class Episode(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class Season(BaseDataClassORJSONMixin):
-    """Represents a podcast season."""
+class SeasonBase(BaseDataClassORJSONMixin):
+    """Base class for a podcast season."""
 
     _links: Links
-    id: str
     titles: Titles
     has_available_episodes: bool = field(metadata=field_options(alias="hasAvailableEpisodes"))
     episode_count: int = field(metadata=field_options(alias="episodeCount"))
-    episodes: EpisodesResponse
     image: list[Image]
     square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
     backdrop_image: list[Image] = field(metadata=field_options(alias="backdropImage"))
+
+
+@dataclass
+class SeasonEmbedded(SeasonBase):
+    """Represents an embedded podcast season."""
+
+    id: str
+
+
+@dataclass
+class Season(SeasonBase):
+    """Represents a podcast season."""
+
+    series_type: SeriesType = field(metadata=field_options(alias="seriesType"))
+    type: PodcastType = field(metadata=field_options(alias="type"))
+    name: str
+    category: Category
+    episodes: list[Episode] = field(
+        metadata=field_options(
+            alias="_embedded",
+            deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
+        ))
 
 
 @dataclass
@@ -116,7 +155,7 @@ class EpisodesResponse(BaseDataClassORJSONMixin):
             alias="_embedded",
             deserialize=lambda x: x["episodes"],
         ))
-    series_type: str | None = field(default=None, metadata=field_options(alias="seriesType"))
+    series_type: SeriesType | None = field(default=None, metadata=field_options(alias="seriesType"))
 
 
 @dataclass
@@ -135,23 +174,36 @@ class Podcast(BaseDataClassORJSONMixin):
     """Represents the main structure of the API response."""
 
     _links: Links
-    series_type: str = field(metadata=field_options(alias="seriesType"))
-    type: str = field(metadata=field_options(alias="type"))
-    season_display_type: str = field(metadata=field_options(alias="seasonDisplayType"))
+    type: PodcastType = field(metadata=field_options(alias="type"))
+    season_display_type: SeasonDisplayType = field(metadata=field_options(alias="seasonDisplayType"))
     series: PodcastSeries
 
+    class Config(BaseConfig):
+        discriminator = Discriminator(
+            field="seriesType",
+            include_subtypes=True,
+        )
+
+
+@dataclass
+class PodcastStandard(Podcast):
+    seriesType = "standard"  # noqa: N815
     episodes: list[Episode] = field(
         default_factory=list,
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: deserialize_embedded(x, "episodes"),
+            deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
         ))
 
+
+@dataclass
+class PodcastUmbrella(Podcast):
+    seriesType = "umbrella"  # noqa: N815
     seasons: list[Season] = field(
         default_factory=list,
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: deserialize_embedded(x, "seasons"),
+            deserialize=lambda x: [SeasonEmbedded.from_dict(d) for d in x["seasons"]],
         ))
 
 
@@ -252,7 +304,7 @@ class Series(BaseDataClassORJSONMixin):
     id: str
     series_id: str = field(metadata=field_options(alias="seriesId"))
     title: str
-    type: str
+    type: SeriesType
     images: list[Image]
     square_images: list[Image] = field(metadata=field_options(alias="squareImages"))
     season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
