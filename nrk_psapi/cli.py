@@ -7,6 +7,7 @@ import logging
 from rich import print as rprint
 
 from nrk_psapi import NrkPodcastAPI
+from nrk_psapi.models.pages import IncludedSection
 from nrk_psapi.models.search import SearchType
 
 
@@ -18,7 +19,6 @@ def main_parser() -> argparse.ArgumentParser:
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser(description='A simple executable to use and test the library.')
-    # _add_default_arguments(parser)
 
     subparsers = parser.add_subparsers(dest='cmd')
     subparsers.required = True
@@ -65,6 +65,13 @@ def main_parser() -> argparse.ArgumentParser:
 
     get_curated_podcasts_parser = subparsers.add_parser('get_curated_podcasts', description='Get curated podcasts.')
     get_curated_podcasts_parser.set_defaults(func=get_curated_podcasts)
+
+    get_pages_parser = subparsers.add_parser('get_pages', description='Get pages.')
+    get_pages_parser.set_defaults(func=get_pages)
+
+    get_page_parser = subparsers.add_parser('get_page', description='Get page content.')
+    get_page_parser.add_argument('page_id', type=str, help='The page id.')
+    get_page_parser.set_defaults(func=get_page)
 
     get_recommendations_parser = subparsers.add_parser('get_recommendations', description='Get recommendations.')
     get_recommendations_parser.add_argument('podcast_id', type=str, help='The podcast id.')
@@ -152,7 +159,7 @@ async def get_metadata(args):
         rprint(metadata)
 
 
-async def get_curated_podcasts():
+async def get_curated_podcasts(args):
     """Get curated podcasts."""
     async with NrkPodcastAPI() as client:
         curated = await client.curated_podcasts()
@@ -160,6 +167,34 @@ async def get_curated_podcasts():
             rprint(f"# {section.title}")
             for podcast in section.podcasts:
                 rprint(f"  - {podcast.title} ({podcast.id})")
+
+
+async def get_pages(args):
+    """Get radio pages."""
+    async with NrkPodcastAPI() as client:
+        radio_pages = await client.radio_pages()
+        rprint("# Radio pages")
+        for p in radio_pages.pages:
+            page = await client.radio_page(p.id)
+            rprint(f"# {page.title}")
+            for section in page.sections:
+                if isinstance(section, IncludedSection):
+                    rprint(f"## {section.included.title}")
+                    for plug in section.included.plugs:
+                        rprint(f" - {plug!s}")
+            rprint("")
+
+
+async def get_page(args):
+    """Get radio page."""
+    async with NrkPodcastAPI() as client:
+        page = await client.radio_page(args.page_id)
+        rprint(f"# {page.title}")
+        for section in page.sections:
+            if isinstance(section, IncludedSection):
+                rprint(f"## {section.included.title}")
+                for plug in section.included.plugs:
+                    rprint(f" - {plug!s}")
 
 
 async def search(args):

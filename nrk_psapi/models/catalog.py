@@ -170,6 +170,10 @@ class SeasonEmbedded(SeasonBase):
     """Represents an embedded podcast season."""
 
     id: str
+    episodes: list[Episode] = field(
+        metadata=field_options(
+            deserialize=lambda x: [Episode.from_dict(d) for d in x["_embedded"]["episodes"]],
+        ))
 
 
 @dataclass
@@ -244,7 +248,18 @@ class PodcastStandard(Podcast):
 @dataclass
 class PodcastUmbrella(Podcast):
     seriesType = SeriesType.UMBRELLA  # noqa: N815
-    seasons: list[Season] = field(
+    seasons: list[SeasonEmbedded] = field(
+        default_factory=list,
+        metadata=field_options(
+            alias="_embedded",
+            deserialize=lambda x: [SeasonEmbedded.from_dict(d) for d in x["seasons"]],
+        ))
+
+
+@dataclass
+class PodcastSequential(Podcast):
+    seriesType = SeriesType.SEQUENTIAL  # noqa: N815
+    seasons: list[SeasonEmbedded] = field(
         default_factory=list,
         metadata=field_options(
             alias="_embedded",

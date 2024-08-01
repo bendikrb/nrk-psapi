@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import timedelta  # noqa: TCH003
 from enum import Enum
 from typing import Literal
 
+from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
-from mashumaro.mixins.orjson import DataClassORJSONMixin
 from mashumaro.types import Discriminator
+
+from .catalog import Link, WebImage  # noqa: TCH001
+from .common import BaseDataClassORJSONMixin
 
 
 class DisplayType(str, Enum):
@@ -45,18 +49,35 @@ class PlugSize(str, Enum):
         return str(self.value)
 
 
+class PlugType(str, Enum):
+    CHANNEL = "channel"
+    SERIES = "series"
+    EPISODE = "episode"
+    STANDALONE_PROGRAM = "standaloneProgram"
+    PODCAST = "podcast"
+    PODCAST_EPISODE = "podcastEpisode"
+    PODCAST_SEASON = "podcastSeason"
+    LINK = "link"
+    PAGE = "page"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+class SectionType(str, Enum):
+    INCLUDED = "included"
+    PLACEHOLDER = "placeholder"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
 class PageTypeEnum(str, Enum):
     CATEGORY = 'category'
     SUBCATEGORY = 'subcategory'
 
     def __str__(self) -> str:
         return str(self.value)
-
-@dataclass
-class BaseDataClassORJSONMixin(DataClassORJSONMixin):
-    class Config(BaseConfig):
-        omit_none = True
-        allow_deserialization_not_by_alias = True
 
 
 @dataclass
@@ -93,25 +114,9 @@ class ProductCustomDimensions(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class SimpleLink(BaseDataClassORJSONMixin):
-    href: str
-
-
-@dataclass
-class HalLink(BaseDataClassORJSONMixin):
-    href: str
-
-
-@dataclass
 class TemplatedLink(BaseDataClassORJSONMixin):
     href: str
-    templated: Literal[True] | None
-
-
-@dataclass
-class WebImage(BaseDataClassORJSONMixin):
-    uri: str
-    width: int
+    templated: Literal[True] | None = None
 
 
 @dataclass
@@ -132,91 +137,93 @@ class SectionEcommerce(BaseDataClassORJSONMixin):
 
 @dataclass
 class StandaloneProgramLinks(BaseDataClassORJSONMixin):
-    program: HalLink
-    playback_metadata: HalLink
-    playback_manifest: HalLink
-    share: HalLink
+    program: Link
+    playback_metadata: Link = field(metadata=field_options(alias="playbackMetadata"))
+    playback_manifest: Link = field(metadata=field_options(alias="playbackManifest"))
+    share: Link
 
 
 @dataclass
 class PageListItemLinks(BaseDataClassORJSONMixin):
-    self: SimpleLink
-
-
-@dataclass
-class EpisodeLinks(BaseDataClassORJSONMixin):
-    program: HalLink
-    series: HalLink
-    playback_metadata: HalLink
-    playback_manifest: HalLink
-    share: HalLink
-    favourite: TemplatedLink | None = None
+    self: Link
 
 
 @dataclass
 class PageLinks(BaseDataClassORJSONMixin):
-    self: HalLink
+    self: Link
 
 
 @dataclass
 class SeriesLinks(BaseDataClassORJSONMixin):
-    series: HalLink
-    share: HalLink
+    series: Link
+    share: Link
     favourite: TemplatedLink | None = None
 
 
 @dataclass
 class ChannelLinks(BaseDataClassORJSONMixin):
-    playback_metadata: HalLink
-    playback_manifest: HalLink
-    share: HalLink
+    playback_metadata: Link = field(metadata=field_options(alias="playbackMetadata"))
+    playback_manifest: Link = field(metadata=field_options(alias="playbackManifest"))
+    share: Link
 
 
 @dataclass
-class PodcastEpisodeLinks(BaseDataClassORJSONMixin):
-    podcast_episode: HalLink | str | None = field(default=None, metadata=field_options(alias="podcastEpisode"))
-    podcast: HalLink | str | None = None
-    audio_download: HalLink | str | None = field(default=None, metadata=field_options(alias="audioDownload"))
-    share: HalLink | str | None = None
-    playback_metadata: HalLink | str | None = field(default=None, metadata=field_options(alias="playbackMetadata"))
-    playback_manifest: HalLink | str | None = field(default=None, metadata=field_options(alias="playbackManifest"))
-    favourite: TemplatedLink | str | None = None
+class ChannelPlugLinks(BaseDataClassORJSONMixin):
+    channel: str
+
+
+@dataclass
+class SeriesPlugLinks(BaseDataClassORJSONMixin):
+    series: str
+
+
+@dataclass
+class PodcastPlugLinks(BaseDataClassORJSONMixin):
+    podcast: str
+
+
+@dataclass
+class PodcastEpisodePlugLinks(BaseDataClassORJSONMixin):
+    podcast_episode: str = field(metadata=field_options(alias="podcastEpisode"))
+    podcast: str
+    audio_download: str = field(metadata=field_options(alias="audioDownload"))
+
+
+@dataclass
+class EpisodePlugLinks(BaseDataClassORJSONMixin):
+    episode: str
+    mediaelement: str
+    series: str
+    season: str
+
+
+@dataclass
+class StandaloneProgramPlugLinks(BaseDataClassORJSONMixin):
+    program: str
+    mediaelement: str
 
 
 @dataclass
 class PodcastSeasonLinks(BaseDataClassORJSONMixin):
-    podcast_season: HalLink
-    podcast: HalLink
-    share: HalLink
+    podcast_season: Link = field(metadata=field_options(alias="podcastSeason"))
+    podcast: Link
+    share: Link
     favourite: TemplatedLink | None = None
 
 
 @dataclass
 class LinkPlugLinks(BaseDataClassORJSONMixin):
-    external_url: HalLink
+    external_url: Link = field(metadata=field_options(alias="externalUrl"))
 
 
 @dataclass
 class PagePlugLinks(BaseDataClassORJSONMixin):
-    page_url: HalLink
+    page_url: Link = field(metadata=field_options(alias="pageUrl"))
 
 
 @dataclass
-class PodcastLinks(BaseDataClassORJSONMixin):
-    podcast: HalLink | str | None = None
-    share: HalLink | str | None = None
-    favourite: TemplatedLink | str | None = None
-
-
-@dataclass
-class HalLinks(BaseDataClassORJSONMixin):
-    self: SimpleLink
-
-
-@dataclass
-class Image(BaseDataClassORJSONMixin):
-    id: str
-    web_images: list[WebImage] = field(metadata=field_options(alias="webImages"))
+class Links(BaseDataClassORJSONMixin):
+    self: Link
 
 
 @dataclass
@@ -239,7 +246,7 @@ class Section(BaseDataClassORJSONMixin):
 
 @dataclass
 class PlaceholderSection(Section):
-    type = "placeholder"
+    type = SectionType.PLACEHOLDER
     placeholder: Placeholder
     id: str | None = None
     e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
@@ -247,72 +254,73 @@ class PlaceholderSection(Section):
 
 @dataclass
 class Episode(BaseDataClassORJSONMixin):
-    _links: EpisodeLinks
-    duration: str
-    program_id: str | None = field(metadata=field_options(alias="programId"))
-    series_id: str | None = field(metadata=field_options(alias="seriesId"))
-    start_time: str | None = field(default=None, metadata=field_options(alias="startTime"))
-    series_title: str | None = field(default=None, metadata=field_options(alias="seriesTitle"))
-    episode_title: str | None = field(default=None, metadata=field_options(alias="episodeTitle"))
+    titles: Titles
+    image: WebImage
+    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    series: Series | None = None
+
+    def __repr__(self):
+        return f"[{self.titles.title}] ({self.series!s}"
 
 
 @dataclass
 class Series(BaseDataClassORJSONMixin):
-    _links: SeriesLinks
-    series_id: str | None = field(default=None, metadata=field_options(alias="seriesId"))
-    series_title: str | None = field(default=None, metadata=field_options(alias="seriesTitle"))
+    titles: Titles
+    image: WebImage | None = None
+    number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
+
+    def __repr__(self):
+        return f"[{self.titles.title}]"
 
 
 @dataclass
 class Channel(BaseDataClassORJSONMixin):
-    _links: ChannelLinks
-    channel_id: str | None = field(default=None, metadata=field_options(alias="channelId"))
-    show_live_badge: bool | None = field(default=None, metadata=field_options(alias="showLiveBadge"))
-    channel_title: str | None = field(default=None, metadata=field_options(alias="channelTitle"))
-    start_date_time: str | None = field(default=None, metadata=field_options(alias="startDateTime"))
+    titles: Titles
+    image: WebImage | None = None
+
+    def __repr__(self):
+        return f"[{self.titles.title}]"
 
 
 @dataclass
 class StandaloneProgram(BaseDataClassORJSONMixin):
-    _links: StandaloneProgramLinks
-    duration: str
-    program_id: str | None = field(default=None, metadata=field_options(alias="programId"))
-    start_time: str | None = field(default=None, metadata=field_options(alias="startTime"))
-    program_title: str | None = field(default=None, metadata=field_options(alias="programTitle"))
+    titles: Titles
+    image: WebImage
+    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+
+    def __repr__(self):
+        return f"[{self.titles.title}]"
 
 
 @dataclass
 class Titles(BaseDataClassORJSONMixin):
     title: str
-    subtitle: str
+    subtitle: str | None = None
 
 
 @dataclass
 class Podcast(BaseDataClassORJSONMixin):
-    _links: PodcastLinks | None = None
-    podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
+    titles: Titles
     image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
-    # podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
-    titles: Titles | None = None
 
     @property
     def podcast_title(self):
         return self.titles.title
 
+    def __repr__(self):
+        return f"[{self.podcast_title}]"
+
 
 @dataclass
 class PodcastEpisode(BaseDataClassORJSONMixin):
-    titles: Titles | None = None
-    _links: PodcastEpisodeLinks | None = None
-    duration: str | None = None
-    image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
-    podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
-    episode_id: str | None = field(default=None, metadata=field_options(alias="episodeId"))
-    start_time: str | None = field(default=None, metadata=field_options(alias="startTime"))
-    podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
-    podcast_episode_title: str | None = field(default=None, metadata=field_options(alias="podcastEpisodeTitle"))
-    podcast: Podcast | None = None
+    titles: Titles
+    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    image_url: str = field(metadata=field_options(alias="imageUrl"))
+    podcast: Podcast
+
+    def __repr__(self):
+        return f"[{self.podcast.podcast_title}] {self.titles.title}"
 
 
 @dataclass
@@ -343,90 +351,81 @@ class PageListItem(BaseDataClassORJSONMixin):
     _links: PageListItemLinks
     title: str
     id: str | None = None
-    image: Image | None = None
-    image_square: Image | None = field(default=None, metadata=field_options(alias="imageSquare"))
+    image: WebImage | None = None
+    image_square: WebImage | None = field(default=None, metadata=field_options(alias="imageSquare"))
 
 
 @dataclass
 class Pages(BaseDataClassORJSONMixin):
-    _links: HalLinks
+    _links: Links
     pages: list[PageListItem]
 
 
 @dataclass
 class ChannelPlug(Plug):
-    type = "channel"
+    type = PlugType.CHANNEL
+    _links: ChannelPlugLinks
     channel: Channel
-    id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+
+    @property
+    def id(self):
+        return self._links.channel.split('/').pop()
+
+    def __repr__(self):
+        return f"<{self.type}> {self.channel!s}"
 
 
 @dataclass
 class SeriesPlug(Plug):
-    type = "series"
+    type = PlugType.SERIES
+    _links: SeriesPlugLinks
     series: Series
-    id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+
+    @property
+    def id(self):
+        return self._links.series.split('/').pop()
+
+    def __repr__(self):
+        return f"<{self.type}> {self.series!s}"
 
 
 @dataclass
 class EpisodePlug(Plug):
-    type = "episode"
+    type = PlugType.EPISODE
+    _links: EpisodePlugLinks
     episode: Episode
-    id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+
+    @property
+    def id(self):
+        return self._links.episode.split('/').pop()
+
+    @property
+    def series_id(self):
+        return self._links.series.split('/').pop()
+
+    def __repr__(self):
+        return f"<{self.type}> {self.episode!s}"
 
 
 @dataclass
 class StandaloneProgramPlug(Plug):
-    type = "standaloneProgram"
-    standalone_program: StandaloneProgram = field(metadata=field_options(alias="standaloneProgram"))
-    hid: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    type = PlugType.STANDALONE_PROGRAM
+    _links: StandaloneProgramPlugLinks
+    program: StandaloneProgram
+
+    @property
+    def id(self):
+        return self._links.program.split('/').pop()
+
+    def __repr__(self):
+        return f"<{self.type}> {self.program!s}"
 
 
 @dataclass
 class PodcastPlug(Plug):
-    type = "podcast"
+    type = PlugType.PODCAST
     podcast: Podcast
-    _links: PodcastLinks
-    # id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    # title: str | None = None
-    # tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    _links: PodcastPlugLinks
 
     @property
     def id(self):
@@ -444,87 +443,71 @@ class PodcastPlug(Plug):
     def tagline(self):
         return self.podcast.titles.subtitle
 
+    def __repr__(self):
+        return f"<{self.type}> {self.podcast!s}"
+
 
 @dataclass
 class PodcastEpisodePlug(Plug):
-    type = "podcastEpisode"
+    type = PlugType.PODCAST_EPISODE
     podcast_episode: PodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
-    _links: PodcastEpisodeLinks
-    id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    _links: PodcastEpisodePlugLinks
 
     @property
-    def links(self):
-        return self._links
+    def id(self):
+        return self._links.podcast_episode.split('/').pop()
+
+    @property
+    def podcast_id(self):
+        return self._links.podcast.split('/').pop()
+
+    def __repr__(self):
+        return f"<{self.type}> {self.podcast_episode!s}"
 
 
 @dataclass
 class PodcastSeasonPlug(Plug):
-    type = "podcastSeason"
+    type = PlugType.PODCAST_SEASON
     id: str
     podcast_season: PodcastSeason = field(metadata=field_options(alias="podcastSeason"))
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    image: WebImage | None = None
+
+    def __repr__(self):
+        return f"<{self.type}> {self.podcast_season!s}"
 
 
 @dataclass
 class LinkPlug(Plug):
-    type = "link"
+    type = PlugType.LINK
     link: LinkPlugInner
     id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    image: WebImage | None = None
+
+    def __repr__(self):
+        return f"<{self.type}> {self.link!s}"
 
 
 @dataclass
 class PagePlug(Plug):
-    type = "page"
+    type = PlugType.PAGE
     page: PagePlugInner
     id: str | None = None
-    image: Image | None = None
-    e_commerce: PlugEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    analytics: PlugAnalytics | None = None
-    title: str | None = None
-    tagline: str | None = None
-    description: str | None = None
-    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
-    backdrop_image: Image | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    image: WebImage | None = None
+
+    def __repr__(self):
+        return f"<{self.type}> {self.page!s}"
 
 
 @dataclass
 class Included(BaseDataClassORJSONMixin):
+    title: str
     plugs: list[Plug]
-    count: int | None = None
-    display_contract: DisplayContract | None = field(default=None, metadata=field_options(alias="displayContract"))
-    plug_size: PlugSize | None = field(default=None, metadata=field_options(alias="plugSize"))
-    title: str | None = None
 
 
 @dataclass
 class IncludedSection(Section):
-    type = "included"
+    type = SectionType.INCLUDED
     included: Included
-    id: str | None = None
-    e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
 
 
 @dataclass
@@ -532,19 +515,10 @@ class Page(BaseDataClassORJSONMixin):
     title: str
     sections: list[Section]
     _links: PageLinks
-    id: str | None = None
-    buttons: list[ButtonItem] | None = None
-    display_type: DisplayType | None = field(default=None, metadata=field_options(alias="displayType"))
-    published_time: str | None = field(default=None, metadata=field_options(alias="publishedTime"))
-    user_segment: str | None = field(default=None, metadata=field_options(alias="userSegment"))
-    image: Image | None = field(default=None, metadata=field_options(alias="image"))
-    image_square: Image | None = field(default=None, metadata=field_options(alias="imageSquare"))
-    experiment_id: str | None = field(default=None, metadata=field_options(alias="experimentId"))
-    variant: int | None = field(default=None, metadata=field_options(alias="variant"))
-    e_commerce: PageEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
-    page_version: str | None = field(default=None, metadata=field_options(alias="pageVersion"))
-    recommendation_id: str | None = field(default=None, metadata=field_options(alias="recommendationId"))
-    back_button: ButtonItem | None = field(default=None, metadata=field_options(alias="backButton"))
+
+    @property
+    def id(self) -> str:
+        return self._links.self.href.split("/").pop()
 
 
 @dataclass
