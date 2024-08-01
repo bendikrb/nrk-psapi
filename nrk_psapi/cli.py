@@ -7,7 +7,11 @@ import logging
 from rich import print as rprint
 
 from nrk_psapi import NrkPodcastAPI
+from nrk_psapi.models.search import SearchType
 
+
+def single_letter(string):
+    return string[:1].upper()
 
 def main_parser() -> argparse.ArgumentParser:
     """Create the ArgumentParser with all relevant subparsers."""
@@ -22,6 +26,12 @@ def main_parser() -> argparse.ArgumentParser:
     get_podcasts_parser = subparsers.add_parser('get_all_podcasts', description='Get all podcasts.')
     get_podcasts_parser.set_defaults(func=get_all_podcasts)
 
+    browse_parser = subparsers.add_parser('browse', description='Browse podcast(s).')
+    browse_parser.add_argument('letter', type=single_letter, help='The letter to browse.')
+    browse_parser.add_argument('--limit', type=int, default=10, help='The number of results to return per page.')
+    browse_parser.add_argument('--page', type=int, default=1, help='The page number to return.')
+    browse_parser.set_defaults(func=browse)
+
     get_podcast_parser = subparsers.add_parser('get_podcast', description='Get podcast(s).')
     get_podcast_parser.add_argument('podcast_id', type=str, nargs="+", help='The podcast id(s).')
     get_podcast_parser.set_defaults(func=get_podcast)
@@ -35,6 +45,10 @@ def main_parser() -> argparse.ArgumentParser:
     get_podcast_episodes_parser.add_argument('podcast_id', type=str, help='The podcast id.')
     get_podcast_episodes_parser.add_argument('--season_id', type=str, required=False, help='The season id.')
     get_podcast_episodes_parser.set_defaults(func=get_podcast_episodes)
+
+    get_series_parser = subparsers.add_parser('get_series', description='Get series.')
+    get_series_parser.add_argument('series_id', type=str, help='The series id.')
+    get_series_parser.set_defaults(func=get_series)
 
     get_episode_parser = subparsers.add_parser('get_episode', description='Get episode.')
     get_episode_parser.add_argument('podcast_id', type=str, help='The podcast id.')
@@ -52,6 +66,17 @@ def main_parser() -> argparse.ArgumentParser:
     get_curated_podcasts_parser = subparsers.add_parser('get_curated_podcasts', description='Get curated podcasts.')
     get_curated_podcasts_parser.set_defaults(func=get_curated_podcasts)
 
+    get_recommendations_parser = subparsers.add_parser('get_recommendations', description='Get recommendations.')
+    get_recommendations_parser.add_argument('podcast_id', type=str, help='The podcast id.')
+    get_recommendations_parser.set_defaults(func=get_recommendations)
+
+    search_parser = subparsers.add_parser('search', description='Search.')
+    search_parser.add_argument('query', type=str, help='The search query.')
+    search_parser.add_argument('--type', type=SearchType, help='The search type.')
+    search_parser.add_argument('--limit', type=int, default=10, help='The number of results to return per page.')
+    search_parser.add_argument('--page', type=int, default=1, help='The page number to return.')
+    search_parser.set_defaults(func=search)
+
     return parser
 
 
@@ -60,6 +85,13 @@ async def get_all_podcasts():
     async with NrkPodcastAPI() as client:
         podcasts = await client.get_all_podcasts()
         rprint(podcasts)
+
+
+async def browse(args):
+    """Browse podcast(s)."""
+    async with NrkPodcastAPI() as client:
+        results = await client.browse(args.letter, per_page=args.limit, page=args.page)
+        rprint(results)
 
 
 async def get_podcast(args):
@@ -85,6 +117,20 @@ async def get_podcast_episodes(args):
             rprint(episode)
 
 
+async def get_series(args):
+    """Get series."""
+    async with NrkPodcastAPI() as client:
+        series = await client.get_series(args.series_id)
+        rprint(series)
+
+
+async def get_recommendations(args):
+    """Get recommendations."""
+    async with NrkPodcastAPI() as client:
+        recommendations = await client.get_recommendations(args.podcast_id)
+        rprint(recommendations)
+
+
 async def get_episode(args):
     """Get episode."""
     async with NrkPodcastAPI() as client:
@@ -106,7 +152,7 @@ async def get_metadata(args):
         rprint(metadata)
 
 
-async def get_curated_podcasts(args):
+async def get_curated_podcasts():
     """Get curated podcasts."""
     async with NrkPodcastAPI() as client:
         curated = await client.curated_podcasts()
@@ -114,6 +160,13 @@ async def get_curated_podcasts(args):
             rprint(f"# {section.title}")
             for podcast in section.podcasts:
                 rprint(f"  - {podcast.title} ({podcast.id})")
+
+
+async def search(args):
+    """Search."""
+    async with NrkPodcastAPI() as client:
+        results = await client.search(args.query, per_page=args.limit, page=args.page, search_type=args.type)
+        rprint(results)
 
 
 def main():

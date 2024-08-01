@@ -21,7 +21,7 @@ from .exceptions import (
     NrkPsApiError,
     NrkPsApiRateLimitError,
 )
-from .models.catalog import Episode, Podcast, Season, Series
+from .models.catalog import Episode, Podcast, Program, Season, Series
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
 from .models.pages import (
@@ -34,7 +34,13 @@ from .models.pages import (
     PodcastPlug,
 )
 from .models.playback import PodcastManifest
-from .models.search import PodcastSearchResponse, SingleLetter
+from .models.recommendations import Recommendation
+from .models.search import (
+    PodcastSearchResponse,
+    SearchResponse,
+    SearchType,
+    SingleLetter,
+)
 from .utils import get_nested_items, sanitize_string
 
 
@@ -113,6 +119,10 @@ class NrkPodcastAPI:
             _LOGGER.debug("New session created.")
             self._close_session = True
 
+        params = kwargs.get("params")
+        if params is not None:
+            kwargs.update(params={k:v for k,v in params.items() if v is not None})
+
         try:
             with async_timeout.timeout(self.request_timeout):
                 response = await self.session.request(
@@ -174,6 +184,14 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}")
         return Episode.from_dict(result)
 
+    async def get_series(self, series_id: str) -> Podcast:
+        result = await self._request(f"radio/catalog/series/{series_id}")
+        return Podcast.from_dict(result)
+
+    async def get_program(self, program_id: str) -> Program:
+        result = await self._request(f"radio/catalog/program/{program_id}")
+        return Program.from_dict(result)
+
     async def get_podcast(self, podcast_id: str) -> Podcast:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}")
         return Podcast.from_dict(result)
@@ -206,25 +224,43 @@ class NrkPodcastAPI:
         )
         return [Series.from_dict(s) for s in result["series"]]
 
-    async def browse(self, letter: SingleLetter, take: int = 50, skip: int = 0) -> PodcastSearchResponse:
+    async def get_recommendations(self, item_id: str) -> Recommendation:
+        result = await self._request(f"radio/recommendations/{item_id}")
+        return Recommendation.from_dict(result)
+
+    async def browse(
+        self,
+        letter: SingleLetter,
+        per_page: int = 50,
+        page: int = 1,
+    ) -> PodcastSearchResponse:
         result = await self._request(
             "radio/search/categories/alt-innhold",
             params={
                 "letter": letter,
-                "take": take,
-                "skip": skip,
+                "take": per_page,
+                "skip": (page - 1) * per_page,
+                "page": page,
             })
         return PodcastSearchResponse.from_dict(result)
 
-    async def search(self, query: str, take: int = 50, skip: int = 0) -> PodcastSearchResponse:
+    async def search(
+        self,
+        query: str,
+        per_page: int = 50,
+        page: int = 1,
+        search_type: SearchType | None = None,
+    ) -> SearchResponse:
         result = await self._request(
             "radio/search/search",
             params={
                 "q": query,
-                "take": take,
-                "skip": skip,
+                "take": per_page,
+                "skip": (page - 1) * per_page,
+                "page": page,
+                "type": str(search_type) if search_type else None,
             })
-        return PodcastSearchResponse.from_dict(result)
+        return SearchResponse.from_dict(result)
 
     async def radio_pages(self) -> Pages:
         result = await self._request("radio/pages")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta  # noqa: TCH003
 from enum import Enum
+import re
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
@@ -15,6 +16,15 @@ from .common import BaseDataClassORJSONMixin
 class PodcastType(str, Enum):
     PODCAST = "podcast"
     CUSTOM_SEASON = "customSeason"
+    SERIES = "series"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+class EpisodeType(str, Enum):
+    PODCAST_EPISODE = "podcast_episode"
+    PROGRAM = "program"
 
     def __str__(self) -> str:
         return str(self.value)
@@ -83,10 +93,22 @@ class Category(BaseDataClassORJSONMixin):
 
 @dataclass
 class Titles(BaseDataClassORJSONMixin):
-    """Contains title information for an episode."""
+    """Contains title information."""
 
     title: str
     subtitle: str | None = None
+
+
+@dataclass
+class DefaultTitles(BaseDataClassORJSONMixin):
+    main_title: str = field(metadata=field_options(alias="mainTitle"))
+    subtitle: str | None = field(default=None, metadata=field_options(alias="subtitle"))
+
+
+@dataclass
+class TemporalTitles(BaseDataClassORJSONMixin):
+    titles: list[str]
+    default_titles: DefaultTitles = field(metadata=field_options(alias="defaultTitles"))
 
 
 @dataclass
@@ -95,19 +117,39 @@ class Episode(BaseDataClassORJSONMixin):
 
     _links: Links
     id: str
+    type: EpisodeType
     episode_id: str = field(metadata=field_options(alias="episodeId"))
     titles: Titles
-    image: list[Image]
-    square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
     date: datetime
     usage_rights: UsageRights = field(metadata=field_options(alias="usageRights"))
     availability: Availability
-    category: Category
-    original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
+    program_information: ProgramInformation | None = field(
+        default=None,
+        metadata=field_options(alias="programInformation"))
+    image: list[Image] | None = None
+    square_image: list[Image] | None = field(default=None, metadata=field_options(alias="squareImage"))
+    category: Category | None = None
     badges: list | None = None
     duration_in_seconds: int | None = field(default=None, metadata=field_options(alias="durationInSeconds"))
     clip_id: str | None = field(default=None, metadata=field_options(alias="clipId"))
+    original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
+    production_year: int | None = field(default=None, metadata=field_options(alias="productionYear"))
+    contributors: list[Contributor] | None = None
+
+    @classmethod
+    def __pre_deserialize__(cls, d: dict[any, any]) -> dict[any, any]:
+        self_href = d.get("_links", {}).get("self", {}).get("href")
+        types = {
+            EpisodeType.PODCAST_EPISODE: r"/radio/catalog/podcast/(.*)/episodes/(.*)",
+            EpisodeType.PROGRAM: r"/radio/catalog/programs/(.*)",
+        }
+        for t, pattern in types.items():
+            if re.match(pattern, self_href):
+                d["type"] = t
+                break
+
+        return d
 
 
 @dataclass
@@ -164,9 +206,11 @@ class PodcastSeries(BaseDataClassORJSONMixin):
     titles: Titles
     category: Category
     image: list[Image]
-    backdrop_image: list[Image] = field(metadata=field_options(alias="backdropImage"))
-    poster_image: list[Image] = field(metadata=field_options(alias="posterImage"))
     square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
+    backdrop_image: list[Image] | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    poster_image: list[Image] | None = field(default=None, metadata=field_options(alias="posterImage"))
+    highlighted_episode: str | None = field(default=None, metadata=field_options(alias="highlightedEpisode"))
+    next_episode: Date | None = field(default=None, metadata=field_options(alias="nextEpisode"))
 
 
 @dataclass
@@ -175,6 +219,7 @@ class Podcast(BaseDataClassORJSONMixin):
 
     _links: Links
     type: PodcastType = field(metadata=field_options(alias="type"))
+    series_type: SeriesType = field(metadata=field_options(alias="seriesType"))
     season_display_type: SeasonDisplayType = field(metadata=field_options(alias="seasonDisplayType"))
     series: PodcastSeries
 
@@ -187,7 +232,7 @@ class Podcast(BaseDataClassORJSONMixin):
 
 @dataclass
 class PodcastStandard(Podcast):
-    seriesType = "standard"  # noqa: N815
+    seriesType = SeriesType.STANDARD  # noqa: N815
     episodes: list[Episode] = field(
         default_factory=list,
         metadata=field_options(
@@ -198,7 +243,7 @@ class PodcastStandard(Podcast):
 
 @dataclass
 class PodcastUmbrella(Podcast):
-    seriesType = "umbrella"  # noqa: N815
+    seriesType = SeriesType.UMBRELLA  # noqa: N815
     seasons: list[Season] = field(
         default_factory=list,
         metadata=field_options(
@@ -268,6 +313,14 @@ class Contributor(BaseDataClassORJSONMixin):
 
 
 @dataclass
+class WebImage(BaseDataClassORJSONMixin):
+    """Wrapper around Image."""
+
+    id: str
+    web_images: list[Image] = field(metadata=field_options(alias="webImages"))
+
+
+@dataclass
 class Image(BaseDataClassORJSONMixin):
     """Represents an image with its URL and width."""
 
@@ -295,11 +348,47 @@ class IndexPoint(BaseDataClassORJSONMixin):
         deserialize=parse_duration,
         serialize=duration_isoformat,
     ))
+    description: str | None = None
     part_id: int | None = field(default=None, metadata=field_options(alias="partId"))
+    mentioned: list[str] | None = None
+    subject_list: list[str] | None = field(default=None, metadata=field_options(alias="subjectList"))
+    contributors: list[str] | None = None
+
+
+@dataclass
+class PlaylistItem(BaseDataClassORJSONMixin):
+    """Represents a playlist item in the playlist."""
+
+    title: str
+    type: str
+    description: str
+    program_id: str = field(metadata=field_options(alias="programId"))
+    channel_id: str = field(metadata=field_options(alias="channelId"))
+    start_time: datetime = field(metadata=field_options(alias="startTime"))
+    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    program_title: str = field(metadata=field_options(alias="programTitle"))
+    start_point: timedelta = field(metadata=field_options(
+        alias="startPoint",
+        deserialize=parse_duration,
+        serialize=duration_isoformat,
+    ))
+
+    class Config(BaseConfig):
+        discriminator = Discriminator(
+            field="type",
+            include_subtypes=True,
+        )
+
+
+@dataclass
+class PlaylistMusicItem(PlaylistItem):
+    type = "Music"
 
 
 @dataclass
 class Series(BaseDataClassORJSONMixin):
+    """Represents a series object."""
+
     _links: Links
     id: str
     series_id: str = field(metadata=field_options(alias="seriesId"))
@@ -308,3 +397,24 @@ class Series(BaseDataClassORJSONMixin):
     images: list[Image]
     square_images: list[Image] = field(metadata=field_options(alias="squareImages"))
     season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+
+
+@dataclass
+class Program(BaseDataClassORJSONMixin):
+    """Represents a program object."""
+
+    _links: Links
+    id: str
+    episode_id: str = field(metadata=field_options(alias="episodeId"))
+    date: datetime
+    program_information: ProgramInformation = field(metadata=field_options(alias="programInformation"))
+    contributors: list[Contributor]
+    image: list[Image]
+    temporal_titles: TemporalTitles = field(metadata=field_options(alias="temporalTitles"))
+    availability: Availability
+    category: Category
+    usage_rights: UsageRights = field(metadata=field_options(alias="usageRights"))
+    production_year: int = field(metadata=field_options(alias="productionYear"))
+    duration: Duration
+    index_points: list[IndexPoint] = field(metadata=field_options(alias="indexPoints"))
+    playlist: list[PlaylistItem] = field(metadata=field_options(alias="playlist"))
