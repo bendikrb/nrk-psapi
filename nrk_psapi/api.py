@@ -22,6 +22,7 @@ from .exceptions import (
     NrkPsApiRateLimitError,
 )
 from .models.catalog import Episode, Podcast, Program, Season, Series
+from .models.channels import Channel
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
 from .models.pages import (
@@ -187,6 +188,10 @@ class NrkPodcastAPI:
     async def get_series(self, series_id: str) -> Podcast:
         result = await self._request(f"radio/catalog/series/{series_id}")
         return Podcast.from_dict(result)
+
+    async def get_live_channel(self, channel_id: str) -> Channel:
+        result = await self._request(f"radio/channels/livebuffer/{channel_id}")
+        return Channel.from_dict(result["channel"])
 
     async def get_program(self, program_id: str) -> Program:
         result = await self._request(f"radio/catalog/program/{program_id}")

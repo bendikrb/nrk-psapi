@@ -14,7 +14,7 @@ from nrk_psapi.models.search import SearchType
 def single_letter(string):
     return string[:1].upper()
 
-def main_parser() -> argparse.ArgumentParser:
+def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     """Create the ArgumentParser with all relevant subparsers."""
     logging.basicConfig(level=logging.DEBUG)
 
@@ -31,6 +31,10 @@ def main_parser() -> argparse.ArgumentParser:
     browse_parser.add_argument('--limit', type=int, default=10, help='The number of results to return per page.')
     browse_parser.add_argument('--page', type=int, default=1, help='The page number to return.')
     browse_parser.set_defaults(func=browse)
+
+    get_channel_parser = subparsers.add_parser('get_channel', description='Get channel.')
+    get_channel_parser.add_argument('channel_id', type=str, help='The channel id.')
+    get_channel_parser.set_defaults(func=get_channel)
 
     get_podcast_parser = subparsers.add_parser('get_podcast', description='Get podcast(s).')
     get_podcast_parser.add_argument('podcast_id', type=str, nargs="+", help='The podcast id(s).')
@@ -99,6 +103,13 @@ async def browse(args):
     async with NrkPodcastAPI() as client:
         results = await client.browse(args.letter, per_page=args.limit, page=args.page)
         rprint(results)
+
+
+async def get_channel(args):
+    """Get channel."""
+    async with NrkPodcastAPI() as client:
+        channel = await client.get_live_channel(args.channel_id)
+        rprint(channel)
 
 
 async def get_podcast(args):
