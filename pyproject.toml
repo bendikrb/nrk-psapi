@@ -35,7 +35,7 @@ backoff = "^2.2.1"
 [tool.poetry.group.dev.dependencies]
 pylint = "3.2.6"
 ruff = "0.6.1"
-pytest = "^7.4.2"
+pytest = ">=7.4.2,<9.0.0"
 
 [tool.poetry.scripts]
 nrk = "nrk_psapi.cli:main"
