@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta  # noqa: TCH003
-from enum import Enum
 from typing import Literal
 
 from isodate import duration_isoformat, parse_duration
@@ -11,19 +10,16 @@ from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
 from .catalog import Link, WebImage  # noqa: TCH001
-from .common import BaseDataClassORJSONMixin
+from .common import BaseDataClassORJSONMixin, StrEnum
 
 
-class DisplayType(str, Enum):
+class DisplayType(StrEnum):
     DEFAULT = 'default'
     GRID = 'grid'
 
-    def __str__(self) -> str:
-        return str(self.value)
-
 
 # noinspection SpellCheckingInspection
-class DisplayContract(str, Enum):
+class DisplayContract(StrEnum):
     HERO = 'hero'
     EDITORIAL = 'editorial'
     INLINEHERO = 'inlineHero'
@@ -36,20 +32,14 @@ class DisplayContract(str, Enum):
     RADIOMULTIHERO = 'radioMultiHero'
     SIDEKICKLOGO = 'sidekickLogo'
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class PlugSize(str, Enum):
+class PlugSize(StrEnum):
     SMALL = 'small'
     MEDIUM = 'medium'
     LARGE = 'large'
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class PlugType(str, Enum):
+class PlugType(StrEnum):
     CHANNEL = "channel"
     SERIES = "series"
     EPISODE = "episode"
@@ -60,24 +50,15 @@ class PlugType(str, Enum):
     LINK = "link"
     PAGE = "page"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class SectionType(str, Enum):
+class SectionType(StrEnum):
     INCLUDED = "included"
     PLACEHOLDER = "placeholder"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class PageTypeEnum(str, Enum):
+class PageTypeEnum(StrEnum):
     CATEGORY = 'category'
     SUBCATEGORY = 'subcategory'
-
-    def __str__(self) -> str:
-        return str(self.value)
 
 
 @dataclass

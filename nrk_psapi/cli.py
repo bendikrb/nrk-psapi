@@ -77,6 +77,11 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     get_page_parser.add_argument('page_id', type=str, help='The page id.')
     get_page_parser.set_defaults(func=get_page)
 
+    get_page_section_parser = subparsers.add_parser('get_page_section', description='Get page section content.')
+    get_page_section_parser.add_argument('page_id', type=str, help='The page id.')
+    get_page_section_parser.add_argument('section_id', type=str, help='The section id.')
+    get_page_section_parser.set_defaults(func=get_page_section)
+
     get_recommendations_parser = subparsers.add_parser('get_recommendations', description='Get recommendations.')
     get_recommendations_parser.add_argument('podcast_id', type=str, help='The podcast id.')
     get_recommendations_parser.set_defaults(func=get_recommendations)
@@ -200,6 +205,18 @@ async def get_page(args):
     """Get radio page."""
     async with NrkPodcastAPI() as client:
         page = await client.radio_page(args.page_id)
+        rprint(f"# {page.title}")
+        for section in page.sections:
+            if isinstance(section, IncludedSection):
+                rprint(f"## {section.included.title}")
+                for plug in section.included.plugs:
+                    rprint(f" - {plug!s}")
+
+
+async def get_page_section(args):
+    """Get radio page."""
+    async with NrkPodcastAPI() as client:
+        page = await client.radio_page(args.page_id, args.section_id)
         rprint(f"# {page.title}")
         for section in page.sections:
             if isinstance(section, IncludedSection):

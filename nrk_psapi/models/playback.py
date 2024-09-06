@@ -2,28 +2,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta  # noqa: TCH003
-from enum import Enum
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
-from .common import BaseDataClassORJSONMixin, DisplayAspectRatioVideo
+from .common import BaseDataClassORJSONMixin, DisplayAspectRatioVideo, StrEnum
 
 
-class PlayableSourceMedium(str, Enum):
+class PlayableSourceMedium(StrEnum):
     AUDIO = "audio"
     VIDEO = "video"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class PlayableStreamingMode(str, Enum):
+class PlayableStreamingMode(StrEnum):
     LIVE = "live"
     ONDEMAND = "onDemand"
-
-    def __str__(self) -> str:
-        return str(self.value)
 
 
 @dataclass

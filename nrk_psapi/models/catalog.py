@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta  # noqa: TCH003
-from enum import Enum
 import re
 
 from isodate import duration_isoformat, parse_duration
@@ -10,43 +9,32 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
-from .common import BaseDataClassORJSONMixin
+from .common import BaseDataClassORJSONMixin, StrEnum
 
 
-class PodcastType(str, Enum):
+class PodcastType(StrEnum):
     PODCAST = "podcast"
     CUSTOM_SEASON = "customSeason"
     SERIES = "series"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class EpisodeType(str, Enum):
+class EpisodeType(StrEnum):
     PODCAST_EPISODE = "podcast_episode"
     PROGRAM = "program"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class SeriesType(str, Enum):
-    UMBRELLA = "umbrella"
-    STANDARD = "standard"
+class SeriesType(StrEnum):
     SEQUENTIAL = "sequential"
+    NEWS = "news"
+    STANDARD = "standard"
+    UMBRELLA = "umbrella"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-class SeasonDisplayType(str, Enum):
+class SeasonDisplayType(StrEnum):
     MANUAL = "manual"
     NUMBER = "number"
     MONTH = "month"
     YEAR = "year"
-
-    def __str__(self) -> str:
-        return str(self.value)
 
 
 @dataclass
@@ -109,6 +97,12 @@ class DefaultTitles(BaseDataClassORJSONMixin):
 class TemporalTitles(BaseDataClassORJSONMixin):
     titles: list[str]
     default_titles: DefaultTitles = field(metadata=field_options(alias="defaultTitles"))
+
+
+@dataclass
+class EpisodeContext(BaseDataClassORJSONMixin):
+    _links: Links
+    type: PodcastType
 
 
 @dataclass

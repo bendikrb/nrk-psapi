@@ -23,12 +23,12 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.12"
-aiohttp = "^3.9.5"
+aiohttp = "^3.10.5"
 async-timeout = "^4.0.3"
 mashumaro = {extras = ["orjson"], version = "^3.13.1"}
-orjson = "^3.9.15"
+orjson = "^3.10.7"
 isodate = "^0.6.1"
-rich = "^13.7.1"
+rich = "^13.8.0"
 rfeed = "^1.1.1"
 backoff = "^2.2.1"
 

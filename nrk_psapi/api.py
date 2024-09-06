@@ -21,7 +21,15 @@ from .exceptions import (
     NrkPsApiError,
     NrkPsApiRateLimitError,
 )
-from .models.catalog import Episode, Podcast, Program, Season, Series
+from .models.catalog import (
+    Episode,
+    Podcast,
+    PodcastSeries,
+    Program,
+    Season,
+    Series,
+    SeriesType,
+)
 from .models.channels import Channel
 from .models.common import IpCheck
 from .models.metadata import PodcastMetadata
@@ -39,7 +47,8 @@ from .models.recommendations import Recommendation
 from .models.search import (
     PodcastSearchResponse,
     SearchResponse,
-    SearchType,
+    SearchResultStrType,
+    SearchResultType,
     SingleLetter,
 )
 from .utils import get_nested_items, sanitize_string
@@ -185,9 +194,28 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}")
         return Episode.from_dict(result)
 
-    async def get_series(self, series_id: str) -> Podcast:
+    async def get_series(self, series_id: str) -> PodcastSeries:
         result = await self._request(f"radio/catalog/series/{series_id}")
-        return Podcast.from_dict(result)
+        return Podcast.from_dict(result).series
+
+    async def get_series_type(self, series_id: str) -> SeriesType:
+        result = await self._request(f"radio/catalog/series/{series_id}/type")
+        return SeriesType.from_str(result["seriesType"])
+
+    async def get_series_season(self, series_id: str, season_id: str) -> Season:
+        result = await self._request(f"radio/catalog/series/{series_id}/seasons/{season_id}")
+        return Season.from_dict(result)
+
+    async def get_series_episodes(self, series_id: str, season_id: str | None = None) -> list[Episode]:
+        if season_id is not None:
+            uri = f"radio/catalog/series/{series_id}/seasons/{season_id}/episodes"
+        else:
+            uri = f"radio/catalog/series/{series_id}/episodes"
+        result = await self._request_paged_all(
+            uri,
+            items_key="_embedded.episodes",
+        )
+        return [Episode.from_dict(e) for e in result]
 
     async def get_live_channel(self, channel_id: str) -> Channel:
         result = await self._request(f"radio/channels/livebuffer/{channel_id}")
@@ -205,7 +233,7 @@ class NrkPodcastAPI:
         results = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
         return list(results)
 
-    async def get_podcast_season(self, podcast_id: str, season_id: str):
+    async def get_podcast_season(self, podcast_id: str, season_id: str) -> Season:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}")
         return Season.from_dict(result)
 
@@ -254,7 +282,7 @@ class NrkPodcastAPI:
         query: str,
         per_page: int = 50,
         page: int = 1,
-        search_type: SearchType | None = None,
+        search_type: SearchResultType | SearchResultStrType | None = None,
     ) -> SearchResponse:
         result = await self._request(
             "radio/search/search",
@@ -266,6 +294,9 @@ class NrkPodcastAPI:
                 "type": str(search_type) if search_type else None,
             })
         return SearchResponse.from_dict(result)
+
+    async def search_suggest(self, query: str) -> list[str]:
+        return await self._request("/radio/search/search/suggest", params={"q": query})
 
     async def radio_pages(self) -> Pages:
         result = await self._request("radio/pages")

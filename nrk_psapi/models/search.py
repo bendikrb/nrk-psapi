@@ -9,7 +9,7 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
-from .common import BaseDataClassORJSONMixin
+from .common import BaseDataClassORJSONMixin, StrEnum
 
 SingleLetter = Literal[
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
@@ -17,7 +17,7 @@ SingleLetter = Literal[
 ]
 
 
-class SearchResultType(str, Enum):
+class SearchResultType(StrEnum):
     CATEGORY = "category"
     CHANNEL = "channel"
     PODCAST = "podcast"
@@ -25,13 +25,21 @@ class SearchResultType(str, Enum):
     SERIES = "series"
     SERIES_EPISODE = "seriesEpisode"
     CUSTOM_SEASON = "customSeason"
+    CUSTOM_SEASON_EPISODE = "customSeasonEpisode"
     SINGLE_PROGRAM = "singleProgram"
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-
-SearchResultSeriesType = Union[SearchResultType.SERIES, SearchResultType.CUSTOM_SEASON]
+SearchResultStrType = Literal[
+    "category",
+    "channel",
+    "podcast",
+    "podcastEpisode",
+    "series",
+    "seriesEpisode",
+    "customSeason",
+    "customSeasonEpisode",
+    "singleProgram",
+]
 
 
 class SearchType(str, Enum):
@@ -44,6 +52,19 @@ class SearchType(str, Enum):
 
     def __str__(self) -> str:
         return str(self.value)
+
+    def __repr__(self) -> str:
+        return str(self.value)
+
+
+SearchResultSeriesType = Union[Literal[
+    SearchType.CHANNEL,
+    SearchType.CATEGORY,
+    SearchType.SERIES,
+    SearchType.EPISODE,
+    SearchType.CONTENT,
+    SearchType.CONTRIBUTOR,
+], SearchType]
 
 
 @dataclass
@@ -75,6 +96,51 @@ class Links(BaseDataClassORJSONMixin):
     prev: Link | None = None
     podcast: Link | None = None
     series: Link | None = None
+
+
+@dataclass
+class SeriesListItemLinks(BaseDataClassORJSONMixin):
+    series: Link | None = None
+    podcast: Link | None = None
+    custom_season: Link | None = None
+    single_program: Link | None = None
+
+
+@dataclass
+class SeriesListItem(BaseDataClassORJSONMixin):
+    _links: SeriesListItemLinks
+    id: str
+    type: Literal[
+        SearchResultType.SERIES, SearchResultType.PODCAST, SearchResultType.SINGLE_PROGRAM, SearchResultType.CUSTOM_SEASON]
+    title: str
+    initial_character: str
+    images: list[Image]
+    series_id: str | None = None
+    season_id: str | None = None
+
+
+@dataclass
+class LetterListItem(BaseDataClassORJSONMixin):
+    letter: str
+    count: int
+    link: str
+
+
+@dataclass
+class CategoriesLinks(BaseDataClassORJSONMixin):
+    next_page: Link | None = None
+    prev_page: Link | None = None
+    next_letter: Link | None = None
+    prev_letter: Link | None = None
+
+
+@dataclass
+class CategoriesResponse(BaseDataClassORJSONMixin):
+    _links: CategoriesLinks
+    letters: list[LetterListItem]
+    title: str
+    series: list[SeriesListItem]
+    total_count: int
 
 
 @dataclass
@@ -187,6 +253,19 @@ class SearchResponseResultSeries(SearchResponseResult):
 
 
 @dataclass
+class SearchResponseResultCustomSeason(SearchResponseResult):
+    """Represents a custom season object in the results array in the main response object from the podcast search API."""
+
+    type = SearchResultType.CUSTOM_SEASON
+    title: str
+    description: str
+    series_id: str = field(metadata=field_options(alias="seriesId"))
+    season_id: str = field(metadata=field_options(alias="seasonId"))
+    square_images: list[Image] = field(metadata=field_options(alias="images_1_1"))
+    score: float
+
+
+@dataclass
 class SearchResponseResultPodcast(SearchResponseResult):
     """Represents a podcast object in the results array in the main response object from the podcast search API."""
 
@@ -203,6 +282,20 @@ class SearchResponseResultEpisode(SearchResponseResult):
     """Represents an episode object in the results array in the main response object from the podcast search API."""
 
     type = SearchResultType.PODCAST_EPISODE
+    title: str
+    episode_id: str = field(metadata=field_options(alias="episodeId"))
+    series_id: str = field(metadata=field_options(alias="seriesId"))
+    series_title: str = field(metadata=field_options(alias="seriesTitle"))
+    date: datetime
+    square_images: list[Image] = field(metadata=field_options(alias="images_1_1"))
+    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+
+
+@dataclass
+class SearchResponseResultCustomSeasonEpisode(SearchResponseResult):
+    """Represents a custom season episode object in the results array in the main response object from the podcast search API."""
+
+    type = SearchResultType.CUSTOM_SEASON_EPISODE
     title: str
     episode_id: str = field(metadata=field_options(alias="episodeId"))
     series_id: str = field(metadata=field_options(alias="seriesId"))
@@ -235,6 +328,10 @@ class SearchResponseResults(BaseDataClassORJSONMixin):
     episodes: SearchResponseResultsResult
     contents: SearchResponseResultsResult
     contributors: SearchResponseResultsResult
+
+    @property
+    def all(self):
+        return self.channels.results + self.categories.results + self.series.results + self.episodes.results + self.contents.results + self.contributors.results
 
 
 @dataclass

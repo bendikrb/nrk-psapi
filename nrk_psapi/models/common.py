@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from enum import Enum
+from typing import Literal, TypedDict
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -25,3 +26,17 @@ class BaseDataClassORJSONMixin(DataClassORJSONMixin):
     class Config(BaseConfig):
         omit_none = True
         allow_deserialization_not_by_alias = True
+
+
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        return str(self.value)
+
+    @classmethod
+    def from_str(cls, value: str) -> StrEnum:
+        return cls(value)
+
+
+class Operation(TypedDict):
+    response_class: type[BaseDataClassORJSONMixin]
+    path: str

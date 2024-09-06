@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
 
 from mashumaro import field_options
 
 from .catalog import Image, Links  # noqa: TCH001
-from .common import BaseDataClassORJSONMixin
+from .common import BaseDataClassORJSONMixin, StrEnum
 
 
 def parse_duration(time_str: str):
@@ -24,7 +23,7 @@ def serialize_timedelta(duration: timedelta):
     return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
-class ChannelType(str, Enum):
+class ChannelType(StrEnum):
     REGIONAL_CHANNEL = "regionalChannel"
     DISTRICT_CHANNEL = "districtChannel"
 
