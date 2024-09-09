@@ -67,6 +67,9 @@ class ChannelEntry(BaseDataClassORJSONMixin):
 class DistrictChannel(BaseDataClassORJSONMixin):
     parent: str
 
+    def __str__(self):
+        return self.parent
+
 
 @dataclass
 class Channel(BaseDataClassORJSONMixin):

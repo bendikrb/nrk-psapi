@@ -135,6 +135,9 @@ class Asset(BaseDataClassORJSONMixin):
     mime_type: str = field(metadata=field_options(alias="mimeType"))
     encrypted: bool
 
+    def __str__(self) -> str:
+        return f"{self.url} ({self.mime_type})"
+
 
 @dataclass
 class Playable(BaseDataClassORJSONMixin):
@@ -150,6 +153,9 @@ class Playable(BaseDataClassORJSONMixin):
     subtitles: list | None = None
     thumbnails: list | None = None
     resolve: str | None = None
+
+    def __str__(self) -> str:
+        return f"{self.resolve}"
 
 
 @dataclass

@@ -2,15 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta  # noqa: TCH003
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
+from rich.table import Table
 
 from .catalog import Link, WebImage  # noqa: TCH001
 from .common import BaseDataClassORJSONMixin, StrEnum
+
+if TYPE_CHECKING:
+    from rich.console import Console, ConsoleOptions, RenderResult
 
 
 class DisplayType(StrEnum):
@@ -196,6 +200,9 @@ class PodcastSeasonLinks(BaseDataClassORJSONMixin):
 class LinkPlugLinks(BaseDataClassORJSONMixin):
     external_url: Link = field(metadata=field_options(alias="externalUrl"))
 
+    def __str__(self):
+        return str(self.external_url)
+
 
 @dataclass
 class PagePlugLinks(BaseDataClassORJSONMixin):
@@ -235,42 +242,46 @@ class PlaceholderSection(Section):
 
 @dataclass
 class Episode(BaseDataClassORJSONMixin):
+    title: str = field(init=False)
     titles: Titles
     image: WebImage
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
     series: Series | None = None
 
-    def __repr__(self):
-        return f"[{self.titles.title}] ({self.series!s}"
+    def __post_init__(self):
+        self.title = self.titles.title
 
 
 @dataclass
 class Series(BaseDataClassORJSONMixin):
+    title: str = field(init=False)
     titles: Titles
     image: WebImage | None = None
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
 
-    def __repr__(self):
-        return f"[{self.titles.title}]"
+    def __post_init__(self):
+        self.title = self.titles.title
 
 
 @dataclass
 class Channel(BaseDataClassORJSONMixin):
+    title: str = field(init=False)
     titles: Titles
     image: WebImage | None = None
 
-    def __repr__(self):
-        return f"[{self.titles.title}]"
+    def __post_init__(self):
+        self.title = self.titles.title
 
 
 @dataclass
 class StandaloneProgram(BaseDataClassORJSONMixin):
+    title: str = field(init=False)
     titles: Titles
     image: WebImage
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
 
-    def __repr__(self):
-        return f"[{self.titles.title}]"
+    def __post_init__(self):
+        self.title = self.titles.title
 
 
 @dataclass
@@ -281,27 +292,27 @@ class Titles(BaseDataClassORJSONMixin):
 
 @dataclass
 class Podcast(BaseDataClassORJSONMixin):
+    podcast_title: str = field(init=False)
     titles: Titles
     image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
 
-    @property
-    def podcast_title(self):
-        return self.titles.title
-
-    def __repr__(self):
-        return f"[{self.podcast_title}]"
+    def __post_init__(self):
+        self.podcast_title = self.titles.title
 
 
 @dataclass
 class PodcastEpisode(BaseDataClassORJSONMixin):
+    title: str = field(init=False)
     titles: Titles
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
     image_url: str = field(metadata=field_options(alias="imageUrl"))
     podcast: Podcast
+    podcast_title: str = field(init=False)
 
-    def __repr__(self):
-        return f"[{self.podcast.podcast_title}] {self.titles.title}"
+    def __post_init__(self):
+        self.title = self.titles.title
+        self.podcast_title = self.podcast.podcast_title
 
 
 @dataclass
@@ -319,6 +330,9 @@ class PodcastSeason(BaseDataClassORJSONMixin):
 @dataclass
 class LinkPlugInner(BaseDataClassORJSONMixin):
     _links: LinkPlugLinks
+
+    def __str__(self):
+        return str(self._links)
 
 
 @dataclass
@@ -344,106 +358,131 @@ class Pages(BaseDataClassORJSONMixin):
 
 @dataclass
 class ChannelPlug(Plug):
+    id: str = field(init=False)
     type = PlugType.CHANNEL
     _links: ChannelPlugLinks
     channel: Channel
 
-    @property
-    def id(self):
-        return self._links.channel.split('/').pop()
+    def __post_init__(self):
+        self.id = self._links.channel.split('/').pop()
 
-    def __repr__(self):
-        return f"<{self.type}> {self.channel!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("channel.title", self.channel.title)
+        yield table
 
 
 @dataclass
 class SeriesPlug(Plug):
+    id: str = field(init=False)
     type = PlugType.SERIES
     _links: SeriesPlugLinks
     series: Series
 
-    @property
-    def id(self):
-        return self._links.series.split('/').pop()
+    def __post_init__(self):
+        self.id = self._links.series.split('/').pop()
 
-    def __repr__(self):
-        return f"<{self.type}> {self.series!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("series.title", self.series.title)
+        table.add_row("series.tagline", self.series.titles.subtitle)
+        table.add_row("series.number_of_episodes", str(self.series.number_of_episodes))
+        yield table
 
 
 @dataclass
 class EpisodePlug(Plug):
+    id: str = field(init=False)
+    series_id: str = field(init=False)
     type = PlugType.EPISODE
     _links: EpisodePlugLinks
     episode: Episode
 
-    @property
-    def id(self):
-        return self._links.episode.split('/').pop()
+    def __post_init__(self):
+        self.id = self._links.episode.split('/').pop()
+        self.series_id = self._links.series.split('/').pop()
 
-    @property
-    def series_id(self):
-        return self._links.series.split('/').pop()
-
-    def __repr__(self):
-        return f"<{self.type}> {self.episode!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("series_id", self.series_id)
+        table.add_row("episode.title", self.episode.title)
+        yield table
 
 
 @dataclass
 class StandaloneProgramPlug(Plug):
+    id: str = field(init=False)
     type = PlugType.STANDALONE_PROGRAM
     _links: StandaloneProgramPlugLinks
     program: StandaloneProgram
 
-    @property
-    def id(self):
-        return self._links.program.split('/').pop()
+    def __post_init__(self):
+        self.id = self._links.program.split('/').pop()
 
-    def __repr__(self):
-        return f"<{self.type}> {self.program!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("program.title", self.program.title)
+        table.add_row("program.duration", str(self.program.duration))
+        yield table
 
 
 @dataclass
 class PodcastPlug(Plug):
+    id: str = field(init=False)
+    title: str = field(init=False)
+    tagline: str = field(init=False)
     type = PlugType.PODCAST
     podcast: Podcast
     _links: PodcastPlugLinks
 
-    @property
-    def id(self):
-        return self._links.podcast.split("/").pop()
+    def __post_init__(self):
+        self.id = self._links.podcast.split("/").pop()
+        self.title = self.podcast.podcast_title
+        self.tagline = self.podcast.titles.subtitle
 
-    @property
-    def links(self):
-        return self._links
-
-    @property
-    def title(self):
-        return self.podcast.podcast_title
-
-    @property
-    def tagline(self):
-        return self.podcast.titles.subtitle
-
-    def __repr__(self):
-        return f"<{self.type}> {self.podcast!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("title", self.title)
+        table.add_row("tagline", self.tagline)
+        table.add_row("podcast.number_of_episodes", str(self.podcast.number_of_episodes))
+        yield table
 
 
 @dataclass
 class PodcastEpisodePlug(Plug):
+    id: str = field(init=False)
+    podcast_id: str = field(init=False)
     type = PlugType.PODCAST_EPISODE
     podcast_episode: PodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
     _links: PodcastEpisodePlugLinks
 
-    @property
-    def id(self):
-        return self._links.podcast_episode.split('/').pop()
+    def __post_init__(self):
+        self.id = self._links.podcast_episode.split('/').pop()
+        self.podcast_id = self._links.podcast.split('/').pop()
 
-    @property
-    def podcast_id(self):
-        return self._links.podcast.split('/').pop()
-
-    def __repr__(self):
-        return f"<{self.type}> {self.podcast_episode!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("podcast_id", self.podcast_id)
+        table.add_row("podcast_episode.title", self.podcast_episode.title)
+        yield table
 
 
 @dataclass
@@ -453,8 +492,13 @@ class PodcastSeasonPlug(Plug):
     podcast_season: PodcastSeason = field(metadata=field_options(alias="podcastSeason"))
     image: WebImage | None = None
 
-    def __repr__(self):
-        return f"<{self.type}> {self.podcast_season!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("podcast_season", str(self.podcast_season))
+        yield table
 
 
 @dataclass
@@ -464,8 +508,13 @@ class LinkPlug(Plug):
     id: str | None = None
     image: WebImage | None = None
 
-    def __repr__(self):
-        return f"<{self.type}> {self.link!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("link", str(self.link))
+        yield table
 
 
 @dataclass
@@ -475,8 +524,13 @@ class PagePlug(Plug):
     id: str | None = None
     image: WebImage | None = None
 
-    def __repr__(self):
-        return f"<{self.type}> {self.page!s}"
+    # noinspection PyUnusedLocal
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        yield f"[b]{self.type}[/b]"
+        table = Table("Attribute", "Value")
+        table.add_row("id", self.id)
+        table.add_row("page", str(self.page))
+        yield table
 
 
 @dataclass
@@ -493,17 +547,17 @@ class IncludedSection(Section):
 
 @dataclass
 class Page(BaseDataClassORJSONMixin):
+    id: str = field(init=False)
     title: str
     sections: list[Section]
     _links: PageLinks
 
-    @property
-    def id(self) -> str:
-        return self._links.self.href.split("/").pop()
+    def __post_init__(self):
+        self.id = self._links.self.href.split("/").pop()
 
 
 @dataclass
-class CuratedPodcast:
+class CuratedPodcast(BaseDataClassORJSONMixin):
     id: str
     title: str
     subtitle: str
@@ -512,14 +566,14 @@ class CuratedPodcast:
 
 
 @dataclass
-class CuratedSection:
+class CuratedSection(BaseDataClassORJSONMixin):
     id: str
     title: str
     podcasts: list[CuratedPodcast]
 
 
 @dataclass
-class Curated:
+class Curated(BaseDataClassORJSONMixin):
     sections: list[CuratedSection]
 
     def get_section_by_id(self, section_id: str) -> CuratedSection | None:

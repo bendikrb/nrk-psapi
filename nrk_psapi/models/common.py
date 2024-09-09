@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, TypeVar
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -11,6 +11,8 @@ from mashumaro.mixins.orjson import DataClassORJSONMixin
 IpCheckLookupSource = Literal["MaxMind", "NEP"]
 IpCheckAccessGroup = Literal["NO", "EEA", "WORLD"]
 DisplayAspectRatioVideo = Literal["16:9", "4:3"]
+
+T = TypeVar("T", bound="DataClassORJSONMixin")
 
 @dataclass
 class IpCheck(DataClassORJSONMixin):

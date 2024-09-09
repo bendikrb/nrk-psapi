@@ -329,10 +329,6 @@ class SearchResponseResults(BaseDataClassORJSONMixin):
     contents: SearchResponseResultsResult
     contributors: SearchResponseResultsResult
 
-    @property
-    def all(self):
-        return self.channels.results + self.categories.results + self.series.results + self.episodes.results + self.contents.results + self.contributors.results
-
 
 @dataclass
 class SearchResponse(BaseDataClassORJSONMixin):

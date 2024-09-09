@@ -19,6 +19,9 @@ class LegalAgeRating(BaseDataClassORJSONMixin):
     display_age: str = field(metadata=field_options(alias="displayAge"))
     display_value: str = field(metadata=field_options(alias="displayValue"))
 
+    def __str__(self) -> str:
+        return f"{self.display_value}"
+
 
 @dataclass
 class LegalAgeBody(BaseDataClassORJSONMixin):
@@ -27,6 +30,9 @@ class LegalAgeBody(BaseDataClassORJSONMixin):
     status: str
     rating: LegalAgeRating
 
+    def __str__(self) -> str:
+        return f"{self.rating}"
+
 
 @dataclass
 class LegalAge(BaseDataClassORJSONMixin):
@@ -34,6 +40,9 @@ class LegalAge(BaseDataClassORJSONMixin):
 
     legal_reference: str = field(metadata=field_options(alias="legalReference"))
     body: LegalAgeBody
+
+    def __str__(self) -> str:
+        return f"[{self.legal_reference}] {self.body}"
 
 
 @dataclass
