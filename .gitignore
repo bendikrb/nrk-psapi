@@ -139,3 +139,5 @@ dmypy.json
 # Project specific ignores
 /radio_*.json
 /tmp
+.idea/markdown.xml
+.idea/yamllint.xml
