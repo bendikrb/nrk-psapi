@@ -35,7 +35,10 @@ backoff = "^2.2.1"
 [tool.poetry.group.dev.dependencies]
 pylint = "3.2.6"
 ruff = "0.6.1"
-pytest = "^7.4.2"
+pytest = "^7.4.3"
+pytest-asyncio = "^0.23.3"
+sphinx = "^8.0.2"
+sphinx-autodoc-typehints = "^2.4.0"
 
 [tool.poetry.scripts]
 nrk = "nrk_psapi.cli:main"
@@ -82,4 +85,14 @@ disable = [
     "missing-class-docstring",
     "missing-function-docstring",
     "missing-module-docstring",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = [
+    "tests",
+]
+norecursedirs = [
+    ".git",
+    "testing_config",
 ]
