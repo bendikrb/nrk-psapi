@@ -23,7 +23,11 @@ from nrk_psapi.models.catalog import (
     PodcastUmbrella,
 )
 from nrk_psapi.models.pages import IncludedSection
-from nrk_psapi.models.search import Highlight, SearchResponseResultsResult, SearchType
+from nrk_psapi.models.search import (
+    Highlight,
+    SearchResponseResultsResult,
+    SearchResultType,
+)
 
 if TYPE_CHECKING:
     from nrk_psapi.models.common import BaseDataClassORJSONMixin
@@ -212,7 +216,7 @@ def highlight_context(  # noqa: C901
 
         result.append((context_start, context_end))
         current_length += context_end - context_start
-        included_occurrences += 1
+        included_occurrences += 1  # noqa: SIM113
 
         if current_length >= max_length:
             break
@@ -236,7 +240,7 @@ def bold_and_truncate(text, max_length=100, context_words=2, word_occurrences=3)
     for match in re.finditer(r"{([^}]+)}", text):
         if occurrences >= word_occurrences:
             break
-        occurrences += 1
+        occurrences += 1  # noqa: SIM113
         start = max(0, match.start() - context_words)
         end = min(len(text), match.end() + context_words)
 
@@ -330,7 +334,7 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
 
     search_parser = subparsers.add_parser('search', description='Search.')
     search_parser.add_argument('query', type=str, help='The search query.')
-    search_parser.add_argument('--type', type=SearchType, help='The search type.')
+    search_parser.add_argument('--type', type=SearchResultType, help='The search type.')
     search_parser.add_argument('--limit', type=int, default=10, help='The number of results to return per page.')
     search_parser.add_argument('--page', type=int, default=1, help='The page number to return.')
     search_parser.set_defaults(func=search)

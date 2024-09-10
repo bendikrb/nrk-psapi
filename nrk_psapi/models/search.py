@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime  # noqa: TCH003
-from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
+from .catalog import Image, Link  # noqa: TCH001
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 SingleLetter = Literal[
@@ -18,6 +18,8 @@ SingleLetter = Literal[
 
 
 class SearchResultType(StrEnum):
+    """The different types of search results that can be returned."""
+
     CATEGORY = "category"
     CHANNEL = "channel"
     PODCAST = "podcast"
@@ -40,38 +42,6 @@ SearchResultStrType = Literal[
     "customSeasonEpisode",
     "singleProgram",
 ]
-
-
-class SearchType(str, Enum):
-    CHANNEL = "channel"
-    CATEGORY = "category"
-    SERIES = "series"
-    EPISODE = "episode"
-    CONTENT = "content"
-    CONTRIBUTOR = "contributor"
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def __repr__(self) -> str:
-        return str(self.value)
-
-
-SearchResultSeriesType = Union[Literal[
-    SearchType.CHANNEL,
-    SearchType.CATEGORY,
-    SearchType.SERIES,
-    SearchType.EPISODE,
-    SearchType.CONTENT,
-    SearchType.CONTRIBUTOR,
-], SearchType]
-
-
-@dataclass
-class Link(BaseDataClassORJSONMixin):
-    """Represents a link in the API response."""
-
-    href: str
 
 
 @dataclass
@@ -111,7 +81,11 @@ class SeriesListItem(BaseDataClassORJSONMixin):
     _links: SeriesListItemLinks
     id: str
     type: Literal[
-        SearchResultType.SERIES, SearchResultType.PODCAST, SearchResultType.SINGLE_PROGRAM, SearchResultType.CUSTOM_SEASON]
+        SearchResultType.SERIES,
+        SearchResultType.PODCAST,
+        SearchResultType.SINGLE_PROGRAM,
+        SearchResultType.CUSTOM_SEASON,
+    ]
     title: str
     initial_character: str
     images: list[Image]
@@ -151,13 +125,13 @@ class Letter(BaseDataClassORJSONMixin):
     count: int
     link: str
 
-
-@dataclass
-class Image(BaseDataClassORJSONMixin):
-    """Represents an image object in the images or squareImages arrays."""
-
-    uri: str
-    width: int
+#
+# @dataclass
+# class Image(BaseDataClassORJSONMixin):
+#     """Represents an image object in the images or squareImages arrays."""
+#
+#     uri: str
+#     width: int
 
 
 @dataclass
@@ -169,7 +143,7 @@ class Highlight(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class Series(BaseDataClassORJSONMixin):
+class SearchedSeries(BaseDataClassORJSONMixin):
     """Represents a series object in the series array."""
 
     id: str
@@ -189,7 +163,7 @@ class PodcastSearchResponse(BaseDataClassORJSONMixin):
 
     letters: list[Letter]
     title: str
-    series: list[Series]
+    series: list[SearchedSeries]
     total_count: int = field(metadata=field_options(alias="totalCount"))
     _links: Links | None = None
 

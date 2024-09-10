@@ -10,7 +10,7 @@ from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 from rich.table import Table
 
-from .catalog import Link, WebImage  # noqa: TCH001
+from .catalog import Link, Titles, WebImage  # noqa: TCH001
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 if TYPE_CHECKING:
@@ -241,19 +241,19 @@ class PlaceholderSection(Section):
 
 
 @dataclass
-class Episode(BaseDataClassORJSONMixin):
+class PluggedEpisode(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     image: WebImage
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
-    series: Series | None = None
+    series: PluggedSeries | None = None
 
     def __post_init__(self):
         self.title = self.titles.title
 
 
 @dataclass
-class Series(BaseDataClassORJSONMixin):
+class PluggedSeries(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     image: WebImage | None = None
@@ -264,7 +264,7 @@ class Series(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class Channel(BaseDataClassORJSONMixin):
+class PluggedChannel(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     image: WebImage | None = None
@@ -274,7 +274,7 @@ class Channel(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class StandaloneProgram(BaseDataClassORJSONMixin):
+class PluggedStandaloneProgram(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     image: WebImage
@@ -285,13 +285,7 @@ class StandaloneProgram(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class Titles(BaseDataClassORJSONMixin):
-    title: str
-    subtitle: str | None = None
-
-
-@dataclass
-class Podcast(BaseDataClassORJSONMixin):
+class PluggedPodcast(BaseDataClassORJSONMixin):
     podcast_title: str = field(init=False)
     titles: Titles
     image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
@@ -302,12 +296,12 @@ class Podcast(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PodcastEpisode(BaseDataClassORJSONMixin):
+class PluggedPodcastEpisode(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
     image_url: str = field(metadata=field_options(alias="imageUrl"))
-    podcast: Podcast
+    podcast: PluggedPodcast
     podcast_title: str = field(init=False)
 
     def __post_init__(self):
@@ -316,7 +310,7 @@ class PodcastEpisode(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class PodcastSeason(BaseDataClassORJSONMixin):
+class PluggedPodcastSeason(BaseDataClassORJSONMixin):
     _links: PodcastSeasonLinks | None = None
     podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
     season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
@@ -361,7 +355,7 @@ class ChannelPlug(Plug):
     id: str = field(init=False)
     type = PlugType.CHANNEL
     _links: ChannelPlugLinks
-    channel: Channel
+    channel: PluggedChannel
 
     def __post_init__(self):
         self.id = self._links.channel.split('/').pop()
@@ -380,7 +374,7 @@ class SeriesPlug(Plug):
     id: str = field(init=False)
     type = PlugType.SERIES
     _links: SeriesPlugLinks
-    series: Series
+    series: PluggedSeries
 
     def __post_init__(self):
         self.id = self._links.series.split('/').pop()
@@ -402,7 +396,7 @@ class EpisodePlug(Plug):
     series_id: str = field(init=False)
     type = PlugType.EPISODE
     _links: EpisodePlugLinks
-    episode: Episode
+    episode: PluggedEpisode
 
     def __post_init__(self):
         self.id = self._links.episode.split('/').pop()
@@ -423,7 +417,7 @@ class StandaloneProgramPlug(Plug):
     id: str = field(init=False)
     type = PlugType.STANDALONE_PROGRAM
     _links: StandaloneProgramPlugLinks
-    program: StandaloneProgram
+    program: PluggedStandaloneProgram
 
     def __post_init__(self):
         self.id = self._links.program.split('/').pop()
@@ -444,7 +438,7 @@ class PodcastPlug(Plug):
     title: str = field(init=False)
     tagline: str = field(init=False)
     type = PlugType.PODCAST
-    podcast: Podcast
+    podcast: PluggedPodcast
     _links: PodcastPlugLinks
 
     def __post_init__(self):
@@ -468,7 +462,7 @@ class PodcastEpisodePlug(Plug):
     id: str = field(init=False)
     podcast_id: str = field(init=False)
     type = PlugType.PODCAST_EPISODE
-    podcast_episode: PodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
+    podcast_episode: PluggedPodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
     _links: PodcastEpisodePlugLinks
 
     def __post_init__(self):
@@ -489,7 +483,7 @@ class PodcastEpisodePlug(Plug):
 class PodcastSeasonPlug(Plug):
     type = PlugType.PODCAST_SEASON
     id: str
-    podcast_season: PodcastSeason = field(metadata=field_options(alias="podcastSeason"))
+    podcast_season: PluggedPodcastSeason = field(metadata=field_options(alias="podcastSeason"))
     image: WebImage | None = None
 
     # noinspection PyUnusedLocal

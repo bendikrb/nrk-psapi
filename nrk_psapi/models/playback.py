@@ -6,6 +6,7 @@ from datetime import datetime, timedelta  # noqa: TCH003
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
+from .catalog import Link  # noqa: TCH001
 from .common import BaseDataClassORJSONMixin, DisplayAspectRatioVideo, StrEnum
 
 
@@ -20,11 +21,14 @@ class PlayableStreamingMode(StrEnum):
 
 
 @dataclass
-class Link(BaseDataClassORJSONMixin):
-    """Represents a link in the API response."""
+class AvailabilityDetailed(BaseDataClassORJSONMixin):
+    """Represents the availability information."""
 
-    href: str
-    name: str | None = None
+    information: str
+    is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
+    on_demand: OnDemand = field(metadata=field_options(alias="onDemand"))
+    external_embedding_allowed: bool = field(metadata=field_options(alias="externalEmbeddingAllowed"))
+    live: dict[str, str] | None = None
 
 
 @dataclass
@@ -42,17 +46,6 @@ class OnDemand(BaseDataClassORJSONMixin):
     _from: datetime = field(metadata=field_options(alias="from"))
     to: datetime
     has_rights_now: bool = field(metadata=field_options(alias="hasRightsNow"))
-
-
-@dataclass
-class Availability(BaseDataClassORJSONMixin):
-    """Represents the availability information for the podcast."""
-
-    information: str
-    is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
-    on_demand: OnDemand = field(metadata=field_options(alias="onDemand"))
-    live: dict | None = None
-    external_embedding_allowed: bool = field(default=True, metadata=field_options(alias="externalEmbeddingAllowed"))
 
 
 @dataclass
@@ -176,7 +169,7 @@ class PodcastManifest(BaseDataClassORJSONMixin):
     id: str
     playability: str
     streaming_mode: PlayableStreamingMode = field(metadata=field_options(alias="streamingMode"))
-    availability: Availability
+    availability: AvailabilityDetailed
     statistics: Statistics
     playable: Playable
     source_medium: PlayableSourceMedium = field(metadata=field_options(alias="sourceMedium"))
