@@ -1,0 +1,1 @@
+{"_links": {"self": {"href": "/ipcheck"}}, "data": {"clientIpAddress": "178.164.91.45", "countryCode": "NO", "isIpNorwegian": true, "lookupSource": "MaxMind", "proxyType": "", "accessGroup": "NO"}}
