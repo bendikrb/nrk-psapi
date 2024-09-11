@@ -53,6 +53,7 @@ from .pages import (
     PagePlug,
     Pages,
     PlaceholderSection,
+    Plug,
     PluggedChannel,
     PluggedEpisode,
     PluggedPodcast,
@@ -157,7 +158,7 @@ OPERATIONS: dict[str, Operation] = {
 
 
 @cache
-def get_operation(path: str) -> Operation | None:
+def get_operation(path: str) -> Operation | None: # pragma: no cover
     for operation in OPERATIONS.values():
         if operation["path"] == path:
             return operation
@@ -194,6 +195,7 @@ __all__ = [
     "PagePlug",
     "Pages",
     "PlaceholderSection",
+    "Plug",
     "PlugType",
     "Podcast",
     "PodcastEpisodePlug",
@@ -210,6 +212,7 @@ __all__ = [
     "Program",
     "ProgramInformation",
     "ProgramInformationDetails",
+    "Playable",
     "Recommendation",
     "SearchResponse",
     "SearchResponseResultEpisode",

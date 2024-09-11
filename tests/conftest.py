@@ -10,20 +10,20 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
-    parser.addoption("--save-fixtures", action="store_true", default=False, help="Save new fixtures")
+    parser.addoption("--update-fixtures", action="store_true", default=False, help="Save updated fixtures")
 
 @pytest.fixture
-def save_fixtures(request):
-    return request.config.getoption("save_fixtures")
+def update_fixtures(request):
+    return request.config.getoption("update_fixtures")
 
 
 @pytest.fixture
-def mock_api_request(monkeypatch, save_fixtures):
+def mock_api_request(monkeypatch, update_fixtures):
     calls = []
 
     async def mock_request(self, uri, *args, **kwargs):  # noqa: ANN002
         fixture_name = uri.replace("/", "_")
-        if save_fixtures:
+        if update_fixtures:
             real_response = await self._real_request(uri, *args, **kwargs)
             save_fixture(fixture_name, real_response)
             calls.append((f"/{uri}", real_response))
@@ -33,7 +33,7 @@ def mock_api_request(monkeypatch, save_fixtures):
             calls.append((f"/{uri}", fixture_data))
             return fixture_data
         except FileNotFoundError as err:
-            raise ValueError(f"No fixture found for {uri}. Run with --save-fixtures to create it.") from err
+            raise ValueError(f"No fixture found for {uri}. Run with --update-fixtures to create it.") from err
 
     # noinspection PyProtectedMember
     monkeypatch.setattr("nrk_psapi.NrkPodcastAPI._real_request", NrkPodcastAPI._request, raising=False)  # noqa: SLF001

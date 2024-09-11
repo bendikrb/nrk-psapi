@@ -28,15 +28,17 @@ async-timeout = "^4.0.3"
 mashumaro = {extras = ["orjson"], version = "^3.13.1"}
 orjson = "^3.10.7"
 isodate = "^0.6.1"
-rich = "^13.8.0"
+rich = "^13.8.1"
 rfeed = "^1.1.1"
 backoff = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "3.2.7"
 ruff = "0.6.4"
-pytest = "^7.4.3"
-pytest-asyncio = "^0.23.3"
+pre-commit = "^2.13.0"
+pytest = "^8.3.1"
+pytest-asyncio = "*"
+pytest-cov = "^5.0.0"
 sphinx = "^8.0.2"
 sphinx-autodoc-typehints = "^2.4.0"
 
@@ -89,10 +91,9 @@ disable = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = [
-    "tests",
-]
-norecursedirs = [
-    ".git",
-    "testing_config",
+asyncio_default_fixture_loop_scope = "package"
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "syntax: marks tests that require syntax highlighting (deselect with '-m \"not syntax\"')",
 ]

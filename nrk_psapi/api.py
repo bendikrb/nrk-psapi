@@ -1,4 +1,5 @@
 """nrk-psapi."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +7,6 @@ from dataclasses import dataclass
 from http import HTTPStatus
 import json
 import socket
-from typing import Self
 
 from aiohttp.client import ClientError, ClientSession
 from aiohttp.hdrs import METH_GET
@@ -24,7 +24,6 @@ from .exceptions import (
 from .models.catalog import (
     Episode,
     Podcast,
-    PodcastSeries,
     Program,
     Season,
     Series,
@@ -92,7 +91,9 @@ class NrkPodcastAPI:
         page_size = 50
 
         while True:
-            data = await self._request_paged(uri, method, page_size=page_size, page=page, **kwargs)
+            data = await self._request_paged(
+                uri, method, page_size=page_size, page=page, **kwargs
+            )
 
             items = get_nested_items(data, items_key)
             results.extend(items)
@@ -113,7 +114,9 @@ class NrkPodcastAPI:
         **kwargs,
     ):
         """Make a paged request."""
-        return await self._request(uri, method, params={"pageSize": page_size, "page": page}, **kwargs)
+        return await self._request(
+            uri, method, params={"pageSize": page_size, "page": page}, **kwargs
+        )
 
     @backoff.on_exception(
         backoff.expo, NrkPsApiConnectionError, max_tries=5, logger=None
@@ -138,7 +141,7 @@ class NrkPodcastAPI:
 
         params = kwargs.get("params")
         if params is not None:
-            kwargs.update(params={k:v for k,v in params.items() if v is not None})
+            kwargs.update(params={k: v for k, v in params.items() if v is not None})
 
         try:
             async with async_timeout.timeout(self.request_timeout):
@@ -169,12 +172,17 @@ class NrkPodcastAPI:
                 )
 
             if content_type == "application/json":
-                raise NrkPsApiError(response.status, json.loads(contents.decode("utf8")))
+                raise NrkPsApiError(
+                    response.status, json.loads(contents.decode("utf8"))
+                )
             raise NrkPsApiError(response.status, {"message": contents.decode("utf8")})
 
         # Handle empty response
         if response.status == HTTPStatus.NO_CONTENT:
-            _LOGGER.warning("Request to <%s> resulted in status 204. Your dataset could be out of date.", url)
+            _LOGGER.warning(
+                "Request to <%s> resulted in status 204. Your dataset could be out of date.",
+                url,
+            )
             return None
 
         if "application/json" in content_type:
@@ -218,17 +226,10 @@ class NrkPodcastAPI:
         :param episode_id:
         :rtype: Episode
         """
-        result = await self._request(f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}")
+        result = await self._request(
+            f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}"
+        )
         return Episode.from_dict(result)
-
-    async def get_series(self, series_id: str) -> PodcastSeries:
-        """Get series.
-
-        :param series_id:
-        :rtype: :class:`nrk_psapi.models.catalog.PodcastSeries`
-        """
-        result = await self._request(f"radio/catalog/series/{series_id}")
-        return PodcastSeries.from_dict(result)
 
     async def get_series_type(self, series_id: str) -> SeriesType:
         """Get series type.
@@ -239,6 +240,15 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/series/{series_id}/type")
         return SeriesType.from_str(result["seriesType"])
 
+    async def get_podcast_type(self, podcast_id: str) -> SeriesType:
+        """Get podcast type.
+
+        :param podcast_id:
+        :rtype: SeriesType
+        """
+        result = await self._request(f"radio/catalog/podcast/{podcast_id}/type")
+        return SeriesType.from_str(result["seriesType"])
+
     async def get_series_season(self, series_id: str, season_id: str) -> Season:
         """Get series season.
 
@@ -246,10 +256,14 @@ class NrkPodcastAPI:
         :param season_id:
         :rtype: Season
         """
-        result = await self._request(f"radio/catalog/series/{series_id}/seasons/{season_id}")
+        result = await self._request(
+            f"radio/catalog/series/{series_id}/seasons/{season_id}"
+        )
         return Season.from_dict(result)
 
-    async def get_series_episodes(self, series_id: str, season_id: str | None = None) -> list[Episode]:
+    async def get_series_episodes(
+        self, series_id: str, season_id: str | None = None
+    ) -> list[Episode]:
         """Get series episodes.
 
         :param series_id:
@@ -300,7 +314,9 @@ class NrkPodcastAPI:
         :type podcast_ids: list
         :rtype: list[Podcast]
         """
-        results = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
+        results = await asyncio.gather(
+            *[self.get_podcast(podcast_id) for podcast_id in podcast_ids]
+        )
         return list(results)
 
     async def get_podcast_season(self, podcast_id: str, season_id: str) -> Season:
@@ -310,10 +326,14 @@ class NrkPodcastAPI:
         :param season_id:
         :rtype: Season
         """
-        result = await self._request(f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}")
+        result = await self._request(
+            f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}"
+        )
         return Season.from_dict(result)
 
-    async def get_podcast_episodes(self, podcast_id: str, season_id: str | None = None) -> list[Episode]:
+    async def get_podcast_episodes(
+        self, podcast_id: str, season_id: str | None = None
+    ) -> list[Episode]:
         """Get podcast episodes.
 
         :param podcast_id:
@@ -339,9 +359,18 @@ class NrkPodcastAPI:
             "radio/search/categories/podcast",
             params={
                 "take": 1000,
-            }
+            },
         )
         return [Series.from_dict(s) for s in result["series"]]
+
+    async def get_series(self, series_id: str) -> Podcast:
+        """Get series.
+
+        :param series_id:
+        :rtype: :class:`nrk_psapi.models.catalog.Podcast`
+        """
+        result = await self._request(f"radio/catalog/series/{series_id}")
+        return Podcast.from_dict(result)
 
     async def get_recommendations(self, item_id: str) -> Recommendation:
         """Get recommendations.
@@ -374,7 +403,8 @@ class NrkPodcastAPI:
                 "take": per_page,
                 "skip": (page - 1) * per_page,
                 "page": page,
-            })
+            },
+        )
         return PodcastSearchResponse.from_dict(result)
 
     async def search(
@@ -403,7 +433,8 @@ class NrkPodcastAPI:
                 "skip": (page - 1) * per_page,
                 "page": page,
                 "type": str(search_type) if search_type else None,
-            })
+            },
+        )
         return SearchResponse.from_dict(result)
 
     async def search_suggest(self, query: str) -> list[str]:
@@ -449,21 +480,23 @@ class NrkPodcastAPI:
             if isinstance(section, IncludedSection):
                 podcasts = [
                     CuratedPodcast(
-                            id=plug.id,
-                            title=plug.title,
-                            subtitle=plug.tagline,
-                            image=plug.podcast.image_url,
-                            number_of_episodes=plug.podcast.number_of_episodes,
+                        id=plug.id,
+                        title=plug.title,
+                        subtitle=plug.tagline,
+                        image=plug.podcast.image_url,
+                        number_of_episodes=plug.podcast.number_of_episodes,
                     )
                     for plug in section.included.plugs
                     if isinstance(plug, PodcastPlug)
                 ]
                 if len(podcasts) > 1:
-                    sections.append(CuratedSection(
-                        id=sanitize_string(section.included.title),
-                        title=section.included.title,
-                        podcasts=podcasts,
-                    ))
+                    sections.append(
+                        CuratedSection(
+                            id=sanitize_string(section.included.title),
+                            title=section.included.title,
+                            podcasts=podcasts,
+                        )
+                    )
         return Curated(sections=sections)
 
     async def close(self) -> None:
@@ -471,7 +504,7 @@ class NrkPodcastAPI:
         if self.session and self._close_session:
             await self.session.close()
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self):
         """Async enter."""
         return self
 

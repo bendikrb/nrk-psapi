@@ -372,12 +372,14 @@ class ChannelPlug(Plug):
 @dataclass
 class SeriesPlug(Plug):
     id: str = field(init=False)
+    title: str = field(init=False)
     type = PlugType.SERIES
     _links: SeriesPlugLinks
     series: PluggedSeries
 
     def __post_init__(self):
         self.id = self._links.series.split('/').pop()
+        self.title = self.series.title
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
@@ -394,6 +396,7 @@ class SeriesPlug(Plug):
 class EpisodePlug(Plug):
     id: str = field(init=False)
     series_id: str = field(init=False)
+    title: str = field(init=False)
     type = PlugType.EPISODE
     _links: EpisodePlugLinks
     episode: PluggedEpisode
@@ -401,6 +404,7 @@ class EpisodePlug(Plug):
     def __post_init__(self):
         self.id = self._links.episode.split('/').pop()
         self.series_id = self._links.series.split('/').pop()
+        self.title = self.episode.title
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:

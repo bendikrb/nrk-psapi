@@ -131,3 +131,11 @@ class PodcastMetadata(BaseDataClassORJSONMixin):
     skip_dialog_info: dict | None = field(default=None, metadata=field_options(alias="skipDialogInfo"))
     interaction: dict | None = None
 
+    manifests: list[Manifest] = field(init=False)
+    podcast: PodcastMetadataEmbedded = field(init=False)
+    podcast_episode: PodcastEpisodeMetadata = field(init=False)
+
+    def __post_init__(self):
+        self.manifests = self._embedded.manifests
+        self.podcast = self._embedded.podcast
+        self.podcast_episode = self._embedded.podcast_episode
