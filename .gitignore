@@ -112,6 +112,9 @@ cover/
 # Sphinx documentation
 docs/_build/
 
+.ruff_cache/
+
+
 #poetry.lock
 
 # Environments
