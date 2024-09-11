@@ -28,7 +28,7 @@ jobs:
       - name: 🏗  Install dependencies
         run: poetry install --no-interaction
       - name: Run tests
-        run: pytest --cov
+        run: poetry run pytest --cov
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v4
         with:
