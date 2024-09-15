@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 console = Console(width=200)
 
 
-def pretty_dataclass(  # noqa: C901, PLR0912
+def pretty_dataclass(  # noqa: PLR0912
     dataclass_obj: BaseDataClassORJSONMixin,
     field_formatters: dict[str, Callable[[any], any]] | None = None,
     hidden_fields: list[str] | None = None,
@@ -103,7 +103,7 @@ def pretty_dataclass(  # noqa: C901, PLR0912
     return table
 
 
-def pretty_dataclass_list(  # noqa: C901, PLR0912
+def pretty_dataclass_list(  # noqa: PLR0912
     dataclass_objs: list[BaseDataClassORJSONMixin],
     field_formatters: dict[str, Callable[[any], any]] | None = None,
     hidden_fields: list[str] | None = None,
@@ -177,7 +177,7 @@ def pretty_dataclass_list(  # noqa: C901, PLR0912
     return table
 
 
-def highlight_context(  # noqa: C901
+def highlight_context(
     text: str,
     highlight_style: str = "italic red",
     max_length=100,

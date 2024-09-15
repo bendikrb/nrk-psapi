@@ -185,8 +185,6 @@ class SeasonBase(BaseDataClassORJSONMixin):
     has_available_episodes: bool = field(metadata=field_options(alias="hasAvailableEpisodes"))
     episode_count: int = field(metadata=field_options(alias="episodeCount"))
     image: list[Image]
-    square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
-    backdrop_image: list[Image] = field(metadata=field_options(alias="backdropImage"))
 
 
 @dataclass
@@ -207,14 +205,16 @@ class Season(SeasonBase):
 
     series_type: SeriesType = field(metadata=field_options(alias="seriesType"))
     type: PodcastType = field(metadata=field_options(alias="type"))
-    name: str
-    category: Category
     episodes: list[Episode] = field(
         metadata=field_options(
             alias="_embedded",
             deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
         ))
+    name: str | None = None
+    category: Category | None = None
     id: str | None = None
+    square_image: list[Image] | None = field(default=None, metadata=field_options(alias="squareImage"))
+    backdrop_image: list[Image] | None = field(default=None, metadata=field_options(alias="backdropImage"))
 
 
 @dataclass
@@ -348,9 +348,11 @@ class ProgramInformation(BaseDataClassORJSONMixin):
     """Contains program information."""
 
     details: ProgramInformationDetails
-    original_title: str = field(metadata=field_options(alias="originalTitle"))
+    original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
 
     def __str__(self):
+        if self.original_title is None:
+            return str(self.details)
         return f"{self.original_title} ({self.details})"
 
 

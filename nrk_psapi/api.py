@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from http import HTTPStatus
-import json
 import socket
 
-from aiohttp.client import ClientError, ClientSession
+from aiohttp.client import ClientError, ClientResponseError, ClientSession
 from aiohttp.hdrs import METH_GET
 import async_timeout
 import backoff
+import orjson
 from yarl import URL
 
 from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
@@ -19,7 +18,6 @@ from .exceptions import (
     NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
     NrkPsApiError,
-    NrkPsApiRateLimitError,
 )
 from .models.catalog import (
     Episode,
@@ -151,47 +149,28 @@ class NrkPodcastAPI:
                     **kwargs,
                     headers=headers,
                 )
+                response.raise_for_status()
         except asyncio.TimeoutError as exception:
             raise NrkPsApiConnectionTimeoutError(
-                "Timeout occurred while connecting to the PodMe API"
+                "Timeout occurred while connecting to NRK API"
             ) from exception
-        except (ClientError, socket.gaierror) as exception:
-            raise NrkPsApiConnectionError(
-                "Error occurred while communicating with the PodMe API"
-            ) from exception
+        except (
+            ClientError,
+            ClientResponseError,
+            socket.gaierror,
+        ) as exception:
+            msg = "Error occurred while communicating with NRK API"
+            raise NrkPsApiConnectionError(msg) from exception
 
         content_type = response.headers.get("Content-Type", "")
-        # Error handling
-        if (response.status // 100) in [4, 5]:
-            contents = await response.read()
-            response.close()
-
-            if response.status == HTTPStatus.TOO_MANY_REQUESTS:
-                raise NrkPsApiRateLimitError(
-                    "Rate limit error has occurred with the PodMe API"
-                )
-
-            if content_type == "application/json":
-                raise NrkPsApiError(
-                    response.status, json.loads(contents.decode("utf8"))
-                )
-            raise NrkPsApiError(response.status, {"message": contents.decode("utf8")})
-
-        # Handle empty response
-        if response.status == HTTPStatus.NO_CONTENT:
-            _LOGGER.warning(
-                "Request to <%s> resulted in status 204. Your dataset could be out of date.",
-                url,
+        text = await response.text()
+        if "application/json" not in content_type:
+            msg = "Unexpected response from the NRK API"
+            raise NrkPsApiError(
+                msg,
+                {"Content-Type": content_type, "response": text},
             )
-            return None
-
-        if "application/json" in content_type:
-            result = await response.json()
-            _LOGGER.debug("Response: %s", str(result))
-            return result
-        result = await response.text()
-        _LOGGER.debug("Response: %s", str(result))
-        return result
+        return orjson.loads(text)
 
     async def ipcheck(self) -> IpCheck:
         """Check if IP is blocked.
@@ -207,7 +186,7 @@ class NrkPodcastAPI:
         :param episode_id:
         :rtype: PodcastManifest
         """
-        result = await self._request(f"playback/manifest/{episode_id}")
+        result = await self._request(f"playback/manifest/podcast/{episode_id}")
         return PodcastManifest.from_dict(result)
 
     async def get_playback_metadata(self, episode_id: str) -> PodcastMetadata:
@@ -295,7 +274,7 @@ class NrkPodcastAPI:
         :param program_id:
         :rtype: Program
         """
-        result = await self._request(f"radio/catalog/program/{program_id}")
+        result = await self._request(f"radio/catalog/programs/{program_id}")
         return Program.from_dict(result)
 
     async def get_podcast(self, podcast_id: str) -> Podcast:
