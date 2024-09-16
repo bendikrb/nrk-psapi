@@ -12,8 +12,36 @@ from .catalog import Image, Link  # noqa: TCH001
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 SingleLetter = Literal[
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'Æ', 'Ø', 'Å', '#',
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "Æ",
+    "Ø",
+    "Å",
+    "#",
 ]
 
 
@@ -56,12 +84,24 @@ class SearchResultLink(BaseDataClassORJSONMixin):
 class Links(BaseDataClassORJSONMixin):
     """Represents the _links object in the API response."""
 
-    next_letter: Link | None = field(default=None, metadata=field_options(alias="nextLetter"))
-    next_page: Link | None = field(default=None, metadata=field_options(alias="nextPage"))
-    prev_letter: Link | None = field(default=None, metadata=field_options(alias="prevLetter"))
-    prev_page: Link | None = field(default=None, metadata=field_options(alias="prevPage"))
-    custom_season: Link | None = field(default=None, metadata=field_options(alias="customSeason"))
-    single_program: Link | None = field(default=None, metadata=field_options(alias="singleProgram"))
+    next_letter: Link | None = field(
+        default=None, metadata=field_options(alias="nextLetter")
+    )
+    next_page: Link | None = field(
+        default=None, metadata=field_options(alias="nextPage")
+    )
+    prev_letter: Link | None = field(
+        default=None, metadata=field_options(alias="prevLetter")
+    )
+    prev_page: Link | None = field(
+        default=None, metadata=field_options(alias="prevPage")
+    )
+    custom_season: Link | None = field(
+        default=None, metadata=field_options(alias="customSeason")
+    )
+    single_program: Link | None = field(
+        default=None, metadata=field_options(alias="singleProgram")
+    )
     next: Link | None = None
     prev: Link | None = None
     podcast: Link | None = None
@@ -125,6 +165,7 @@ class Letter(BaseDataClassORJSONMixin):
     count: int
     link: str
 
+
 #
 # @dataclass
 # class Image(BaseDataClassORJSONMixin):
@@ -154,7 +195,9 @@ class SearchedSeries(BaseDataClassORJSONMixin):
     images: list[Image]
     square_images: list[Image] = field(metadata=field_options(alias="squareImages"))
     _links: Links
-    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    season_id: str | None = field(
+        default=None, metadata=field_options(alias="seasonId")
+    )
 
 
 @dataclass
@@ -262,7 +305,9 @@ class SearchResponseResultEpisode(SearchResponseResult):
     series_title: str = field(metadata=field_options(alias="seriesTitle"))
     date: datetime
     square_images: list[Image] = field(metadata=field_options(alias="images_1_1"))
-    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    season_id: str | None = field(
+        default=None, metadata=field_options(alias="seasonId")
+    )
 
 
 @dataclass
@@ -276,7 +321,9 @@ class SearchResponseResultCustomSeasonEpisode(SearchResponseResult):
     series_title: str = field(metadata=field_options(alias="seriesTitle"))
     date: datetime
     square_images: list[Image] = field(metadata=field_options(alias="images_1_1"))
-    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    season_id: str | None = field(
+        default=None, metadata=field_options(alias="seasonId")
+    )
 
 
 @dataclass
@@ -310,6 +357,8 @@ class SearchResponse(BaseDataClassORJSONMixin):
 
     count: int
     take_count: SearchResponseCounts = field(metadata=field_options(alias="takeCount"))
-    total_count: SearchResponseCounts = field(metadata=field_options(alias="totalCount"))
+    total_count: SearchResponseCounts = field(
+        metadata=field_options(alias="totalCount")
+    )
     results: SearchResponseResults
     is_suggest_result: bool = field(metadata=field_options(alias="isSuggestResult"))

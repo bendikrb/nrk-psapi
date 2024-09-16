@@ -27,7 +27,9 @@ class AvailabilityDetailed(BaseDataClassORJSONMixin):
     information: str
     is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
     on_demand: OnDemand = field(metadata=field_options(alias="onDemand"))
-    external_embedding_allowed: bool = field(metadata=field_options(alias="externalEmbeddingAllowed"))
+    external_embedding_allowed: bool = field(
+        metadata=field_options(alias="externalEmbeddingAllowed")
+    )
     live: dict[str, str] | None = None
 
 
@@ -114,8 +116,9 @@ class Statistics(BaseDataClassORJSONMixin):
     ga: GaStatistics | None = None
     conviva: dict | None = None
     luna: Luna | None = None
-    quality_of_experience: QualityOfExperience | None = field(default=None,
-                                                              metadata=field_options(alias="qualityOfExperience"))
+    quality_of_experience: QualityOfExperience | None = field(
+        default=None, metadata=field_options(alias="qualityOfExperience")
+    )
     snowplow: dict[str, str] = field(default_factory=dict)
 
 
@@ -136,13 +139,20 @@ class Asset(BaseDataClassORJSONMixin):
 class Playable(BaseDataClassORJSONMixin):
     """Represents the playable content information."""
 
-    end_sequence_start_time: str | None = field(default=None, metadata=field_options(alias="endSequenceStartTime"))
-    duration: timedelta | None = field(default=None, metadata=field_options(
-        deserialize=parse_duration,
-        serialize=duration_isoformat,
-    ))
+    end_sequence_start_time: str | None = field(
+        default=None, metadata=field_options(alias="endSequenceStartTime")
+    )
+    duration: timedelta | None = field(
+        default=None,
+        metadata=field_options(
+            deserialize=parse_duration,
+            serialize=duration_isoformat,
+        ),
+    )
     assets: list[Asset] | None = None
-    live_buffer: dict | None = field(default=None, metadata=field_options(alias="liveBuffer"))
+    live_buffer: dict | None = field(
+        default=None, metadata=field_options(alias="liveBuffer")
+    )
     subtitles: list | None = None
     thumbnails: list | None = None
     resolve: str | None = None
@@ -153,9 +163,15 @@ class Playable(BaseDataClassORJSONMixin):
 
 @dataclass
 class SkipDialogInfo(BaseDataClassORJSONMixin):
-    start_intro_in_seconds: float = field(metadata=field_options(alias="startIntroInSeconds"))
-    end_intro_in_seconds: float = field(metadata=field_options(alias="endIntroInSeconds"))
-    start_credits_in_seconds: float = field(metadata=field_options(alias="startCreditsInSeconds"))
+    start_intro_in_seconds: float = field(
+        metadata=field_options(alias="startIntroInSeconds")
+    )
+    end_intro_in_seconds: float = field(
+        metadata=field_options(alias="endIntroInSeconds")
+    )
+    start_credits_in_seconds: float = field(
+        metadata=field_options(alias="startCreditsInSeconds")
+    )
     start_intro: str = field(metadata=field_options(alias="startIntro"))
     end_intro: str = field(metadata=field_options(alias="endIntro"))
     start_credits: str = field(metadata=field_options(alias="startCredits"))
@@ -168,12 +184,21 @@ class PodcastManifest(BaseDataClassORJSONMixin):
     _links: Links
     id: str
     playability: str
-    streaming_mode: PlayableStreamingMode = field(metadata=field_options(alias="streamingMode"))
+    streaming_mode: PlayableStreamingMode = field(
+        metadata=field_options(alias="streamingMode")
+    )
     availability: AvailabilityDetailed
     statistics: Statistics
     playable: Playable
-    source_medium: PlayableSourceMedium = field(metadata=field_options(alias="sourceMedium"))
-    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
-    display_aspect_ratio: DisplayAspectRatioVideo | None = field(default=None,
-                                                                 metadata=field_options(alias="displayAspectRatio"))
-    skip_dialog_info: SkipDialogInfo | None = field(default=None, metadata=field_options(alias="skipDialogInfo"))
+    source_medium: PlayableSourceMedium = field(
+        metadata=field_options(alias="sourceMedium")
+    )
+    non_playable: dict | None = field(
+        default=None, metadata=field_options(alias="nonPlayable")
+    )
+    display_aspect_ratio: DisplayAspectRatioVideo | None = field(
+        default=None, metadata=field_options(alias="displayAspectRatio")
+    )
+    skip_dialog_info: SkipDialogInfo | None = field(
+        default=None, metadata=field_options(alias="skipDialogInfo")
+    )

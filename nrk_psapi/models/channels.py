@@ -10,8 +10,10 @@ from .common import BaseDataClassORJSONMixin, StrEnum
 
 
 def parse_duration(time_str: str):
-    time_parts = time_str.split(':')
-    return timedelta(hours=int(time_parts[0]), minutes=int(time_parts[1]), seconds=int(time_parts[2]))
+    time_parts = time_str.split(":")
+    return timedelta(
+        hours=int(time_parts[0]), minutes=int(time_parts[1]), seconds=int(time_parts[2])
+    )
 
 
 def serialize_timedelta(duration: timedelta):
@@ -38,10 +40,18 @@ class ChannelImage(BaseDataClassORJSONMixin):
 
 @dataclass
 class ChannelEntryImages(BaseDataClassORJSONMixin):
-    main_key_art_image: ChannelImage | None = field(default=None, metadata=field_options(alias="mainKeyArtImage"))
-    backdrop_image: ChannelImage | None = field(default=None, metadata=field_options(alias="backdropImage"))
-    poster_image: ChannelImage | None = field(default=None, metadata=field_options(alias="posterImage"))
-    square_image: ChannelImage | None = field(default=None, metadata=field_options(alias="squareImage"))
+    main_key_art_image: ChannelImage | None = field(
+        default=None, metadata=field_options(alias="mainKeyArtImage")
+    )
+    backdrop_image: ChannelImage | None = field(
+        default=None, metadata=field_options(alias="backdropImage")
+    )
+    poster_image: ChannelImage | None = field(
+        default=None, metadata=field_options(alias="posterImage")
+    )
+    square_image: ChannelImage | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
 
 
 @dataclass
@@ -51,15 +61,19 @@ class ChannelEntry(BaseDataClassORJSONMixin):
     image: ChannelEntryImages
     actual_start: datetime = field(metadata=field_options(alias="actualStart"))
     actual_end: datetime = field(metadata=field_options(alias="actualEnd"))
-    program_duration: timedelta = field(metadata=field_options(
-        alias="programDuration",
-        deserialize=parse_duration,
-        serialize=serialize_timedelta,
-    ))
-    duration: timedelta = field(metadata=field_options(
-        deserialize=parse_duration,
-        serialize=serialize_timedelta,
-    ))
+    program_duration: timedelta = field(
+        metadata=field_options(
+            alias="programDuration",
+            deserialize=parse_duration,
+            serialize=serialize_timedelta,
+        )
+    )
+    duration: timedelta = field(
+        metadata=field_options(
+            deserialize=parse_duration,
+            serialize=serialize_timedelta,
+        )
+    )
     series_id: str | None = None
 
 
@@ -76,14 +90,18 @@ class Channel(BaseDataClassORJSONMixin):
     id: str
     title: str
     type: ChannelType
-    live_buffer_duration: timedelta = field(metadata=field_options(
-        alias="liveBufferDuration",
-        deserialize=parse_duration,
-        serialize=serialize_timedelta,
-    ))
+    live_buffer_duration: timedelta = field(
+        metadata=field_options(
+            alias="liveBufferDuration",
+            deserialize=parse_duration,
+            serialize=serialize_timedelta,
+        )
+    )
     image: ChannelImage
     entries: list[ChannelEntry]
-    district_channel: DistrictChannel | None = field(default=None, metadata=field_options(alias="districtChannel"))
+    district_channel: DistrictChannel | None = field(
+        default=None, metadata=field_options(alias="districtChannel")
+    )
 
 
 @dataclass

@@ -7,7 +7,7 @@ from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
 from .catalog import Image, IndexPoint, Link, Links, Titles  # noqa: TCH001
-from .common import BaseDataClassORJSONMixin
+from .common import BaseDataClassORJSONMixin, T
 from .playback import AvailabilityDetailed, Playable  # noqa: TCH001
 
 
@@ -100,17 +100,6 @@ class PodcastEpisodeMetadata(BaseDataClassORJSONMixin):
 
 
 @dataclass
-class Embedded(BaseDataClassORJSONMixin):
-    """Represents the _embedded section in the API response."""
-
-    manifests: list[Manifest]
-    podcast: PodcastMetadataEmbedded
-    podcast_episode: PodcastEpisodeMetadata = field(metadata=field_options(alias="podcastEpisode"))
-    next: dict | None = None
-    previous: dict | None = None
-
-
-@dataclass
 class PodcastMetadata(BaseDataClassORJSONMixin):
     """Represents the main structure of the API response for podcast metadata."""
 
@@ -118,24 +107,35 @@ class PodcastMetadata(BaseDataClassORJSONMixin):
     id: str
     playability: str
     streaming_mode: str = field(metadata=field_options(alias="streamingMode"))
-    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    duration: timedelta = field(
+        metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
+    )
     legal_age: LegalAge = field(metadata=field_options(alias="legalAge"))
     availability: AvailabilityDetailed
     preplay: Preplay
     playable: Playable
     source_medium: str = field(metadata=field_options(alias="sourceMedium"))
-    _embedded: Embedded
-    display_aspect_ratio: str | None = field(default=None, metadata=field_options(alias="displayAspectRatio"))
-    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
-    interaction_points: list | None = field(default=None, metadata=field_options(alias="interactionPoints"))
-    skip_dialog_info: dict | None = field(default=None, metadata=field_options(alias="skipDialogInfo"))
+    display_aspect_ratio: str | None = field(
+        default=None, metadata=field_options(alias="displayAspectRatio")
+    )
+    non_playable: dict | None = field(
+        default=None, metadata=field_options(alias="nonPlayable")
+    )
+    interaction_points: list | None = field(
+        default=None, metadata=field_options(alias="interactionPoints")
+    )
+    skip_dialog_info: dict | None = field(
+        default=None, metadata=field_options(alias="skipDialogInfo")
+    )
     interaction: dict | None = None
 
-    manifests: list[Manifest] = field(init=False)
-    podcast: PodcastMetadataEmbedded = field(init=False)
-    podcast_episode: PodcastEpisodeMetadata = field(init=False)
+    manifests: list[Manifest] = field(default_factory=list)
+    podcast: PodcastMetadataEmbedded | None = field(default=None)
+    podcast_episode: PodcastEpisodeMetadata | None = field(default=None)
 
-    def __post_init__(self):
-        self.manifests = self._embedded.manifests
-        self.podcast = self._embedded.podcast
-        self.podcast_episode = self._embedded.podcast_episode
+    @classmethod
+    def __pre_deserialize__(cls: type[T], d: T) -> T:
+        d["manifests"] = d.get("_embedded", {}).get("manifests")
+        d["podcast"] = d.get("_embedded", {}).get("podcast")
+        d["podcast_episode"] = d.get("_embedded", {}).get("podcastEpisode")
+        return d

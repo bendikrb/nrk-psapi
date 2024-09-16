@@ -22,6 +22,7 @@ class RecommendationType(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
 
+
 @dataclass
 class UpstreamSystemInfoPayload(BaseDataClassORJSONMixin):
     id: str
@@ -84,7 +85,9 @@ class RecommendedSeries(BaseDataClassORJSONMixin):
     titles: Titles
     image: WebImage
     number_of_episodes: int = field(metadata=field_options(alias="numberOfEpisodes"))
-    square_image: WebImage | None = field(default=None, metadata=field_options(alias="squareImage"))
+    square_image: WebImage | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
 
 
 @dataclass
@@ -92,15 +95,21 @@ class RecommendedProgram(BaseDataClassORJSONMixin):
     id: str
     titles: Titles
     image: WebImage
-    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
-    square_image: WebImage | None = field(default=None, metadata=field_options(alias="squareImage"))
+    duration: timedelta = field(
+        metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
+    )
+    square_image: WebImage | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
 
 
 @dataclass
 class EmbeddedRecommendation(BaseDataClassORJSONMixin):
     _links: Links
     type: RecommendationType
-    upstream_system_info: UpstreamSystemInfo = field(metadata=field_options(alias="upstreamSystemInfo"))
+    upstream_system_info: UpstreamSystemInfo = field(
+        metadata=field_options(alias="upstreamSystemInfo")
+    )
 
     class Config(BaseConfig):
         discriminator = Discriminator(
@@ -118,7 +127,9 @@ class EmbeddedPodcastRecommendation(EmbeddedRecommendation):
 @dataclass
 class EmbeddedPodcastSeasonRecommendation(EmbeddedRecommendation):
     type = RecommendationType.PODCAST_SEASON
-    podcast_season: RecommendedPodcastSeason
+    podcast_season: RecommendedPodcastSeason = field(
+        metadata=field_options(alias="podcastSeason")
+    )
 
 
 @dataclass
@@ -140,5 +151,8 @@ class Recommendation(BaseDataClassORJSONMixin):
         default_factory=list,
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: [EmbeddedRecommendation.from_dict(d) for d in x["recommendations"]],
-        ))
+            deserialize=lambda x: [
+                EmbeddedRecommendation.from_dict(d) for d in x["recommendations"]
+            ],
+        ),
+    )

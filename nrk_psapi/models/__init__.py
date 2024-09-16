@@ -1,4 +1,5 @@
 """nrk-psapi models."""
+
 from __future__ import annotations
 
 from functools import cache
@@ -158,11 +159,12 @@ OPERATIONS: dict[str, Operation] = {
 
 
 @cache
-def get_operation(path: str) -> Operation | None: # pragma: no cover
+def get_operation(path: str) -> Operation | None:  # pragma: no cover
     for operation in OPERATIONS.values():
         if operation["path"] == path:
             return operation
     return None
+
 
 __all__ = [
     "Availability",

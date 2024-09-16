@@ -88,7 +88,9 @@ class Category(BaseDataClassORJSONMixin):
 
     id: str
     name: str | None = None
-    display_value: str | None = field(default=None, metadata=field_options(alias="displayValue"))
+    display_value: str | None = field(
+        default=None, metadata=field_options(alias="displayValue")
+    )
 
     def __str__(self):
         return self.display_value or self.id
@@ -135,22 +137,34 @@ class Episode(BaseDataClassORJSONMixin):
     type: EpisodeType
     episode_id: str = field(metadata=field_options(alias="episodeId"))
     titles: Titles
-    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    duration: timedelta = field(
+        metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
+    )
     date: datetime
     usage_rights: UsageRights = field(metadata=field_options(alias="usageRights"))
     availability: Availability
     program_information: ProgramInformation | None = field(
-        default=None,
-        metadata=field_options(alias="programInformation"))
+        default=None, metadata=field_options(alias="programInformation")
+    )
     image: list[Image] | None = None
-    square_image: list[Image] | None = field(default=None, metadata=field_options(alias="squareImage"))
+    square_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
     category: Category | None = None
     badges: list | None = None
-    duration_in_seconds: int | None = field(default=None, metadata=field_options(alias="durationInSeconds"))
+    duration_in_seconds: int | None = field(
+        default=None, metadata=field_options(alias="durationInSeconds")
+    )
     clip_id: str | None = field(default=None, metadata=field_options(alias="clipId"))
-    original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
-    production_year: int | None = field(default=None, metadata=field_options(alias="productionYear"))
-    index_points: list[IndexPoint] | None = field(default=None, metadata=field_options(alias="indexPoints"))
+    original_title: str | None = field(
+        default=None, metadata=field_options(alias="originalTitle")
+    )
+    production_year: int | None = field(
+        default=None, metadata=field_options(alias="productionYear")
+    )
+    index_points: list[IndexPoint] | None = field(
+        default=None, metadata=field_options(alias="indexPoints")
+    )
     contributors: list[Contributor] | None = None
 
     @classmethod
@@ -182,7 +196,9 @@ class SeasonBase(BaseDataClassORJSONMixin):
 
     _links: Links
     titles: Titles
-    has_available_episodes: bool = field(metadata=field_options(alias="hasAvailableEpisodes"))
+    has_available_episodes: bool = field(
+        metadata=field_options(alias="hasAvailableEpisodes")
+    )
     episode_count: int = field(metadata=field_options(alias="episodeCount"))
     image: list[Image]
 
@@ -195,8 +211,11 @@ class SeasonEmbedded(SeasonBase):
     episodes: list[Episode] | None = field(
         default=None,
         metadata=field_options(
-            deserialize=lambda x: [Episode.from_dict(d) for d in x["_embedded"]["episodes"]],
-        ))
+            deserialize=lambda x: [
+                Episode.from_dict(d) for d in x["_embedded"]["episodes"]
+            ],
+        ),
+    )
 
 
 @dataclass
@@ -208,13 +227,35 @@ class Season(SeasonBase):
     episodes: list[Episode] = field(
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
-        ))
+            deserialize=lambda x: [
+                Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]
+            ],
+        )
+    )
     name: str | None = None
     category: Category | None = None
     id: str | None = None
-    square_image: list[Image] | None = field(default=None, metadata=field_options(alias="squareImage"))
-    backdrop_image: list[Image] | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    series_id: str | None = None
+    podcast_id: str | None = None
+    square_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
+    backdrop_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="backdropImage")
+    )
+
+    @classmethod
+    def __pre_deserialize__(cls: type[T], d: T) -> T:
+        self_id = d.get("_links", {}).get("self", {}).get("href", "").split("/").pop()
+        series_id = d.get("_links", {}).get("series", {}).get("name")
+        podcast_id = d.get("_links", {}).get("podcast", {}).get("name")
+        if series_id:
+            d["series_id"] = series_id
+        if podcast_id:
+            d["podcast_id"] = podcast_id
+        if not d.get("name") and self_id:
+            d["name"] = self_id
+        return d
 
 
 @dataclass
@@ -226,8 +267,11 @@ class EpisodesResponse(BaseDataClassORJSONMixin):
         metadata=field_options(
             alias="_embedded",
             deserialize=lambda x: x["episodes"],
-        ))
-    series_type: SeriesType | None = field(default=None, metadata=field_options(alias="seriesType"))
+        )
+    )
+    series_type: SeriesType | None = field(
+        default=None, metadata=field_options(alias="seriesType")
+    )
 
 
 @dataclass
@@ -236,11 +280,21 @@ class PodcastSeries(BaseDataClassORJSONMixin):
     titles: Titles
     category: Category
     image: list[Image]
-    square_image: list[Image] = field(metadata=field_options(alias="squareImage"))
-    backdrop_image: list[Image] | None = field(default=None, metadata=field_options(alias="backdropImage"))
-    poster_image: list[Image] | None = field(default=None, metadata=field_options(alias="posterImage"))
-    highlighted_episode: str | None = field(default=None, metadata=field_options(alias="highlightedEpisode"))
-    next_episode: Date | None = field(default=None, metadata=field_options(alias="nextEpisode"))
+    square_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="squareImage")
+    )
+    backdrop_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="backdropImage")
+    )
+    poster_image: list[Image] | None = field(
+        default=None, metadata=field_options(alias="posterImage")
+    )
+    highlighted_episode: str | None = field(
+        default=None, metadata=field_options(alias="highlightedEpisode")
+    )
+    next_episode: Date | None = field(
+        default=None, metadata=field_options(alias="nextEpisode")
+    )
 
 
 @dataclass
@@ -250,7 +304,9 @@ class Podcast(BaseDataClassORJSONMixin):
     _links: Links
     type: PodcastType = field(metadata=field_options(alias="type"))
     series_type: SeriesType = field(metadata=field_options(alias="seriesType"))
-    season_display_type: SeasonDisplayType = field(metadata=field_options(alias="seasonDisplayType"))
+    season_display_type: SeasonDisplayType = field(
+        metadata=field_options(alias="seasonDisplayType")
+    )
     series: PodcastSeries
 
     class Config(BaseConfig):
@@ -267,8 +323,18 @@ class PodcastStandard(Podcast):
         default_factory=list,
         metadata=field_options(
             alias="_embedded",
-            deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
-        ))
+            deserialize=lambda x: [
+                Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]
+            ],
+        ),
+    )
+    seasons: list[SeasonLink] = field(default_factory=list)
+
+    @classmethod
+    def __pre_deserialize__(cls: type[T], d: T) -> T:
+        season_links = d.get("_links", {}).get("seasons", [])
+        d["seasons"] = [{"id": d["name"], "title": d["title"]} for d in season_links]
+        return d
 
 
 @dataclass
@@ -279,7 +345,8 @@ class PodcastUmbrella(Podcast):
         metadata=field_options(
             alias="_embedded",
             deserialize=lambda x: [SeasonEmbedded.from_dict(d) for d in x["seasons"]],
-        ))
+        ),
+    )
 
 
 @dataclass
@@ -290,7 +357,14 @@ class PodcastSequential(Podcast):
         metadata=field_options(
             alias="_embedded",
             deserialize=lambda x: [SeasonEmbedded.from_dict(d) for d in x["seasons"]],
-        ))
+        ),
+    )
+
+
+@dataclass
+class SeasonLink(BaseDataClassORJSONMixin):
+    id: str
+    title: str
 
 
 @dataclass
@@ -313,23 +387,35 @@ class Links(BaseDataClassORJSONMixin):
     self: Link | None = None
     manifests: list[Link] | None = None
     next: Link | None = None
-    next_links: list[Link] | None = field(default=None, metadata=field_options(alias="nextLinks"))
+    next_links: list[Link] | None = field(
+        default=None, metadata=field_options(alias="nextLinks")
+    )
     playback: Link | None = None
     series: Link | None = None
     season: Link | None = None
     seasons: list[Link] | None = None
-    custom_season: Link | None = field(default=None, metadata=field_options(alias="customSeason"))
+    custom_season: Link | None = field(
+        default=None, metadata=field_options(alias="customSeason")
+    )
     podcast: Link | None = None
     favourite: Link | None = None
     share: Link | None = None
     progress: Link | None = None
     progresses: list[Link] | None = None
     recommendations: Link | None = None
-    extra_material: Link | None = field(default=None, metadata=field_options(alias="extraMaterial"))
-    personalized_next: Link | None = field(default=None, metadata=field_options(alias="personalizedNext"))
-    user_data: Link | None = field(default=None, metadata=field_options(alias="userData"))
+    extra_material: Link | None = field(
+        default=None, metadata=field_options(alias="extraMaterial")
+    )
+    personalized_next: Link | None = field(
+        default=None, metadata=field_options(alias="personalizedNext")
+    )
+    user_data: Link | None = field(
+        default=None, metadata=field_options(alias="userData")
+    )
     episodes: Link | None = None
-    highlighted_episode: Link | None = field(default=None, metadata=field_options(alias="highlightedEpisode"))
+    highlighted_episode: Link | None = field(
+        default=None, metadata=field_options(alias="highlightedEpisode")
+    )
 
 
 @dataclass
@@ -348,7 +434,9 @@ class ProgramInformation(BaseDataClassORJSONMixin):
     """Contains program information."""
 
     details: ProgramInformationDetails
-    original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
+    original_title: str | None = field(
+        default=None, metadata=field_options(alias="originalTitle")
+    )
 
     def __str__(self):
         if self.original_title is None:
@@ -362,6 +450,13 @@ class Contributor(BaseDataClassORJSONMixin):
 
     role: str
     name: list[str]
+
+    @classmethod
+    def __pre_deserialize__(cls: type[T], d: T) -> T:
+        name = d.get("name", [])
+        if not isinstance(name, list):
+            d["name"] = [name]
+        return d
 
 
 @dataclass
@@ -378,7 +473,9 @@ class Image(BaseDataClassORJSONMixin):
 
     url: str = field(metadata=field_options(alias="uri"))
     width: int | None = None
-    pixel_width: int | None = field(default=None, metadata=field_options(alias="pixelWidth"))
+    pixel_width: int | None = field(
+        default=None, metadata=field_options(alias="pixelWidth")
+    )
 
     def __str__(self):
         return self.url
@@ -389,10 +486,12 @@ class Duration(BaseDataClassORJSONMixin):
     """Represents the duration of the episode in various formats."""
 
     seconds: int
-    iso8601: timedelta = field(metadata=field_options(
-        deserialize=parse_duration,
-        serialize=duration_isoformat,
-    ))
+    iso8601: timedelta = field(
+        metadata=field_options(
+            deserialize=parse_duration,
+            serialize=duration_isoformat,
+        )
+    )
     display_value: str = field(metadata=field_options(alias="displayValue"))
 
 
@@ -401,15 +500,19 @@ class IndexPoint(BaseDataClassORJSONMixin):
     """Represents a point of interest within the episode."""
 
     title: str
-    start_point: timedelta = field(metadata=field_options(
-        alias="startPoint",
-        deserialize=parse_duration,
-        serialize=duration_isoformat,
-    ))
+    start_point: timedelta = field(
+        metadata=field_options(
+            alias="startPoint",
+            deserialize=parse_duration,
+            serialize=duration_isoformat,
+        )
+    )
     description: str | None = None
     part_id: int | None = field(default=None, metadata=field_options(alias="partId"))
     mentioned: list[str] | None = None
-    subject_list: list[str] | None = field(default=None, metadata=field_options(alias="subjectList"))
+    subject_list: list[str] | None = field(
+        default=None, metadata=field_options(alias="subjectList")
+    )
     contributors: list[Contributor] | None = None
 
 
@@ -423,13 +526,17 @@ class PlaylistItem(BaseDataClassORJSONMixin):
     program_id: str = field(metadata=field_options(alias="programId"))
     channel_id: str = field(metadata=field_options(alias="channelId"))
     start_time: datetime = field(metadata=field_options(alias="startTime"))
-    duration: timedelta = field(metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat))
+    duration: timedelta = field(
+        metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
+    )
     program_title: str = field(metadata=field_options(alias="programTitle"))
-    start_point: timedelta = field(metadata=field_options(
-        alias="startPoint",
-        deserialize=parse_duration,
-        serialize=duration_isoformat,
-    ))
+    start_point: timedelta = field(
+        metadata=field_options(
+            alias="startPoint",
+            deserialize=parse_duration,
+            serialize=duration_isoformat,
+        )
+    )
 
     class Config(BaseConfig):
         discriminator = Discriminator(
@@ -454,7 +561,9 @@ class Series(BaseDataClassORJSONMixin):
     type: PodcastType
     images: list[Image]
     square_images: list[Image] = field(metadata=field_options(alias="squareImages"))
-    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    season_id: str | None = field(
+        default=None, metadata=field_options(alias="seasonId")
+    )
 
 
 @dataclass
@@ -465,10 +574,14 @@ class Program(BaseDataClassORJSONMixin):
     id: str
     episode_id: str = field(metadata=field_options(alias="episodeId"))
     date: datetime
-    program_information: ProgramInformation = field(metadata=field_options(alias="programInformation"))
+    program_information: ProgramInformation = field(
+        metadata=field_options(alias="programInformation")
+    )
     contributors: list[Contributor]
     image: list[Image]
-    temporal_titles: TemporalTitles = field(metadata=field_options(alias="temporalTitles"))
+    temporal_titles: TemporalTitles = field(
+        metadata=field_options(alias="temporalTitles")
+    )
     availability: Availability
     category: Category
     usage_rights: UsageRights = field(metadata=field_options(alias="usageRights"))
