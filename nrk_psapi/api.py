@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from http import HTTPStatus
 import socket
 
 from aiohttp.client import ClientError, ClientResponseError, ClientSession
@@ -18,6 +19,8 @@ from .exceptions import (
     NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
     NrkPsApiError,
+    NrkPsApiNotFoundError,
+    NrkPsApiRateLimitError,
 )
 from .models.catalog import (
     Episode,
@@ -48,7 +51,7 @@ from .models.search import (
     SearchResultType,
     SingleLetter,
 )
-from .utils import get_nested_items, sanitize_string
+from .utils import fetch_file_info, get_nested_items, sanitize_string
 
 
 @dataclass
@@ -154,9 +157,16 @@ class NrkPodcastAPI:
             raise NrkPsApiConnectionTimeoutError(
                 "Timeout occurred while connecting to NRK API"
             ) from exception
+        except ClientResponseError as exception:
+            if exception.status == HTTPStatus.TOO_MANY_REQUESTS:
+                raise NrkPsApiRateLimitError(
+                    "Too many requests to NRK API. Try again later."
+                ) from exception
+            if exception.status == HTTPStatus.NOT_FOUND:
+                raise NrkPsApiNotFoundError("Resource not found") from exception
+            raise NrkPsApiError from exception
         except (
             ClientError,
-            ClientResponseError,
             socket.gaierror,
         ) as exception:
             msg = "Error occurred while communicating with NRK API"
@@ -477,6 +487,10 @@ class NrkPodcastAPI:
                         )
                     )
         return Curated(sections=sections)
+
+    async def fetch_file_info(self, url: URL | str):
+        """Proxies call to `utils.fetch_file_info`, passing on self.session."""
+        return await fetch_file_info(url, self.session)
 
     async def close(self) -> None:
         """Close open client session."""

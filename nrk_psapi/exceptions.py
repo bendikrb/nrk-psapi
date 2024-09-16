@@ -5,6 +5,10 @@ class NrkPsApiError(Exception):
     """Generic NrkPs exception."""
 
 
+class NrkPsApiNotFoundError(NrkPsApiError):
+    """NrkPs not found exception."""
+
+
 class NrkPsApiConnectionError(NrkPsApiError):
     """NrkPs connection exception."""
 

@@ -1,4 +1,5 @@
 """NRK Podcast API constants."""
+
 import logging
 
 LOGGER = logging.getLogger(__name__)

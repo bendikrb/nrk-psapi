@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
+
+from aiohttp import ClientSession
+from asyncstdlib import cache
+
+if TYPE_CHECKING:
+    from yarl import URL
 
 
 def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any]]:
@@ -19,6 +26,24 @@ def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any
 def sanitize_string(s: str):
     """Sanitize a string to be used as a URL parameter."""
 
-    s = s.lower().replace(' ', '_')
-    s = s.replace('æ', 'ae').replace('ø', 'oe').replace('å', 'aa')
-    return re.sub(r'^[0-9_]+', '', re.sub(r'[^a-z0-9_]', '', s))[:50].rstrip('_')
+    s = s.lower().replace(" ", "_")
+    s = s.replace("æ", "ae").replace("ø", "oe").replace("å", "aa")
+    return re.sub(r"^[0-9_]+", "", re.sub(r"[^a-z0-9_]", "", s))[:50].rstrip("_")
+
+
+@cache
+async def fetch_file_info(
+    url: URL | str, session: ClientSession | None = None
+) -> tuple[int, str]:
+    """Retrieve content-length and content-type for the given URL."""
+    close_session = False
+    if session is None:
+        session = ClientSession()
+        close_session = True
+
+    response = await session.head(url)
+    content_length = response.headers.get("Content-Length")
+    mime_type = response.headers.get("Content-Type")
+    if close_session:
+        await session.close()
+    return int(content_length), mime_type
