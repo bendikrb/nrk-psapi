@@ -24,6 +24,10 @@ format:
 format-check:
 	$(run) ruff --check nrk_psapi
 
+.PHONY: docs
+docs:
+	$(run) sphinx-build docs docs/_build
+
 .PHONY: setup
 setup:
 	poetry install
