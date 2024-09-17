@@ -41,7 +41,7 @@ pylint = "3.2.7"
 pytest = "^8.3.3"
 pytest-asyncio = "*"
 pytest-cov = "^5.0.0"
-ruff = "0.6.4"
+ruff = "0.6.5"
 sphinx = "^7.3.7"
 sphinx-book-theme = "^1.1.3"
 
