@@ -433,7 +433,7 @@ async def test_search_suggest(aresponses: ResponsesMockServer):
 )
 async def test_get_metadata(aresponses: ResponsesMockServer, episode_id: str):
     fixture_name = f"playback_metadata_podcast_{episode_id}"
-    uri = f"/playback/metadata/podcast/{episode_id}"
+    uri = f"/playback/metadata/{episode_id}"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
         URL(PSAPI_BASE_URL).host,
@@ -444,7 +444,6 @@ async def test_get_metadata(aresponses: ResponsesMockServer, episode_id: str):
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session)
         result = await nrk_api.get_playback_metadata(episode_id)
-        assert uri == fixture["_links"]["self"]["href"]
         assert isinstance(result, PodcastMetadata)
         assert isinstance(result.podcast, PodcastMetadataEmbedded)
         assert isinstance(result.podcast_episode, PodcastEpisodeMetadata)
@@ -468,7 +467,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, episode_id: str):
 )
 async def test_get_manifest(aresponses: ResponsesMockServer, episode_id: str):
     fixture_name = f"playback_manifest_podcast_{episode_id}"
-    uri = f"/playback/manifest/podcast/{episode_id}"
+    uri = f"/playback/manifest/{episode_id}"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
         URL(PSAPI_BASE_URL).host,
@@ -479,7 +478,6 @@ async def test_get_manifest(aresponses: ResponsesMockServer, episode_id: str):
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session)
         result = await nrk_api.get_playback_manifest(episode_id)
-        assert uri == fixture["_links"]["self"]["href"]
         assert isinstance(result, PodcastManifest)
 
 

@@ -32,9 +32,7 @@ def sanitize_string(s: str):
 
 
 @cache
-async def fetch_file_info(
-    url: URL | str, session: ClientSession | None = None
-) -> tuple[int, str]:
+async def fetch_file_info(url: URL | str, session: ClientSession | None = None) -> tuple[int, str]:
     """Retrieve content-length and content-type for the given URL."""
     close_session = False
     if session is None:
