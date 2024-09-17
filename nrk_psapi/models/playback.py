@@ -27,10 +27,13 @@ class AvailabilityDetailed(BaseDataClassORJSONMixin):
     information: str
     is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
     on_demand: OnDemand = field(metadata=field_options(alias="onDemand"))
-    external_embedding_allowed: bool = field(
-        metadata=field_options(alias="externalEmbeddingAllowed")
-    )
+    external_embedding_allowed: bool = field(metadata=field_options(alias="externalEmbeddingAllowed"))
     live: dict[str, str] | None = None
+
+    def __str__(self):
+        if self.information:
+            return self.information
+        return str(self.on_demand)
 
 
 @dataclass
@@ -48,6 +51,9 @@ class OnDemand(BaseDataClassORJSONMixin):
     _from: datetime = field(metadata=field_options(alias="from"))
     to: datetime
     has_rights_now: bool = field(metadata=field_options(alias="hasRightsNow"))
+
+    def __str__(self):
+        return f"On demand: {self._from.isoformat()} - {self.to.isoformat()}"
 
 
 @dataclass
@@ -150,28 +156,24 @@ class Playable(BaseDataClassORJSONMixin):
         ),
     )
     assets: list[Asset] | None = None
-    live_buffer: dict | None = field(
-        default=None, metadata=field_options(alias="liveBuffer")
-    )
+    live_buffer: dict | None = field(default=None, metadata=field_options(alias="liveBuffer"))
     subtitles: list | None = None
     thumbnails: list | None = None
     resolve: str | None = None
 
     def __str__(self) -> str:
-        return f"{self.resolve}"
+        if self.resolve:
+            return f"{self.resolve}"
+        if self.assets:
+            return "\n".join([str(x) for x in self.assets])
+        return f"Playable({self.to_dict()})"
 
 
 @dataclass
 class SkipDialogInfo(BaseDataClassORJSONMixin):
-    start_intro_in_seconds: float = field(
-        metadata=field_options(alias="startIntroInSeconds")
-    )
-    end_intro_in_seconds: float = field(
-        metadata=field_options(alias="endIntroInSeconds")
-    )
-    start_credits_in_seconds: float = field(
-        metadata=field_options(alias="startCreditsInSeconds")
-    )
+    start_intro_in_seconds: float = field(metadata=field_options(alias="startIntroInSeconds"))
+    end_intro_in_seconds: float = field(metadata=field_options(alias="endIntroInSeconds"))
+    start_credits_in_seconds: float = field(metadata=field_options(alias="startCreditsInSeconds"))
     start_intro: str = field(metadata=field_options(alias="startIntro"))
     end_intro: str = field(metadata=field_options(alias="endIntro"))
     start_credits: str = field(metadata=field_options(alias="startCredits"))
@@ -184,18 +186,12 @@ class PodcastManifest(BaseDataClassORJSONMixin):
     _links: Links
     id: str
     playability: str
-    streaming_mode: PlayableStreamingMode = field(
-        metadata=field_options(alias="streamingMode")
-    )
+    streaming_mode: PlayableStreamingMode = field(metadata=field_options(alias="streamingMode"))
     availability: AvailabilityDetailed
     statistics: Statistics
     playable: Playable
-    source_medium: PlayableSourceMedium = field(
-        metadata=field_options(alias="sourceMedium")
-    )
-    non_playable: dict | None = field(
-        default=None, metadata=field_options(alias="nonPlayable")
-    )
+    source_medium: PlayableSourceMedium = field(metadata=field_options(alias="sourceMedium"))
+    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
     display_aspect_ratio: DisplayAspectRatioVideo | None = field(
         default=None, metadata=field_options(alias="displayAspectRatio")
     )

@@ -239,9 +239,7 @@ class PlaceholderSection(Section):
     type = SectionType.PLACEHOLDER
     placeholder: Placeholder
     id: str | None = None
-    e_commerce: SectionEcommerce | None = field(
-        default=None, metadata=field_options(alias="eCommerce")
-    )
+    e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
 
 
 @dataclass
@@ -263,9 +261,7 @@ class PluggedSeries(BaseDataClassORJSONMixin):
     title: str = field(init=False)
     titles: Titles
     image: WebImage | None = None
-    number_of_episodes: int | None = field(
-        default=None, metadata=field_options(alias="numberOfEpisodes")
-    )
+    number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
 
     def __post_init__(self):
         self.title = self.titles.title
@@ -298,12 +294,8 @@ class PluggedStandaloneProgram(BaseDataClassORJSONMixin):
 class PluggedPodcast(BaseDataClassORJSONMixin):
     podcast_title: str = field(init=False)
     titles: Titles
-    image_url: str | None = field(
-        default=None, metadata=field_options(alias="imageUrl")
-    )
-    number_of_episodes: int | None = field(
-        default=None, metadata=field_options(alias="numberOfEpisodes")
-    )
+    image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
+    number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
 
     def __post_init__(self):
         self.podcast_title = self.titles.title
@@ -328,27 +320,13 @@ class PluggedPodcastEpisode(BaseDataClassORJSONMixin):
 @dataclass
 class PluggedPodcastSeason(BaseDataClassORJSONMixin):
     _links: PodcastSeasonLinks | None = None
-    podcast_id: str | None = field(
-        default=None, metadata=field_options(alias="podcastId")
-    )
-    season_id: str | None = field(
-        default=None, metadata=field_options(alias="seasonId")
-    )
-    season_number: int | None = field(
-        default=None, metadata=field_options(alias="seasonNumber")
-    )
-    number_of_episodes: int | None = field(
-        default=None, metadata=field_options(alias="numberOfEpisodes")
-    )
-    image_url: str | None = field(
-        default=None, metadata=field_options(alias="imageUrl")
-    )
-    podcast_title: str | None = field(
-        default=None, metadata=field_options(alias="podcastTitle")
-    )
-    podcast_season_title: str | None = field(
-        default=None, metadata=field_options(alias="podcastSeasonTitle")
-    )
+    podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
+    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    season_number: int | None = field(default=None, metadata=field_options(alias="seasonNumber"))
+    number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
+    image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
+    podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
+    podcast_season_title: str | None = field(default=None, metadata=field_options(alias="podcastSeasonTitle"))
 
 
 @dataclass
@@ -371,9 +349,7 @@ class PageListItem(BaseDataClassORJSONMixin):
     title: str
     id: str | None = None
     image: WebImage | None = None
-    image_square: WebImage | None = field(
-        default=None, metadata=field_options(alias="imageSquare")
-    )
+    image_square: WebImage | None = field(default=None, metadata=field_options(alias="imageSquare"))
 
 
 @dataclass
@@ -393,9 +369,7 @@ class ChannelPlug(Plug):
         self.id = self._links.channel.split("/").pop()
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -416,9 +390,7 @@ class SeriesPlug(Plug):
         self.title = self.series.title
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -443,9 +415,7 @@ class EpisodePlug(Plug):
         self.title = self.episode.title
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -465,9 +435,7 @@ class StandaloneProgramPlug(Plug):
         self.id = self._links.program.split("/").pop()
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -491,17 +459,13 @@ class PodcastPlug(Plug):
         self.tagline = self.podcast.titles.subtitle
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
         table.add_row("title", self.title)
         table.add_row("tagline", self.tagline)
-        table.add_row(
-            "podcast.number_of_episodes", str(self.podcast.number_of_episodes)
-        )
+        table.add_row("podcast.number_of_episodes", str(self.podcast.number_of_episodes))
         yield table
 
 
@@ -510,9 +474,7 @@ class PodcastEpisodePlug(Plug):
     id: str = field(init=False)
     podcast_id: str = field(init=False)
     type = PlugType.PODCAST_EPISODE
-    podcast_episode: PluggedPodcastEpisode = field(
-        metadata=field_options(alias="podcastEpisode")
-    )
+    podcast_episode: PluggedPodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
     _links: PodcastEpisodePlugLinks
 
     def __post_init__(self):
@@ -520,9 +482,7 @@ class PodcastEpisodePlug(Plug):
         self.podcast_id = self._links.podcast.split("/").pop()
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -535,15 +495,11 @@ class PodcastEpisodePlug(Plug):
 class PodcastSeasonPlug(Plug):
     type = PlugType.PODCAST_SEASON
     id: str
-    podcast_season: PluggedPodcastSeason = field(
-        metadata=field_options(alias="podcastSeason")
-    )
+    podcast_season: PluggedPodcastSeason = field(metadata=field_options(alias="podcastSeason"))
     image: WebImage | None = None
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -559,9 +515,7 @@ class LinkPlug(Plug):
     image: WebImage | None = None
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
@@ -577,9 +531,7 @@ class PagePlug(Plug):
     image: WebImage | None = None
 
     # noinspection PyUnusedLocal
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)

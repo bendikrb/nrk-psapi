@@ -11,9 +11,7 @@ from .common import BaseDataClassORJSONMixin, StrEnum
 
 def parse_duration(time_str: str):
     time_parts = time_str.split(":")
-    return timedelta(
-        hours=int(time_parts[0]), minutes=int(time_parts[1]), seconds=int(time_parts[2])
-    )
+    return timedelta(hours=int(time_parts[0]), minutes=int(time_parts[1]), seconds=int(time_parts[2]))
 
 
 def serialize_timedelta(duration: timedelta):
@@ -43,15 +41,9 @@ class ChannelEntryImages(BaseDataClassORJSONMixin):
     main_key_art_image: ChannelImage | None = field(
         default=None, metadata=field_options(alias="mainKeyArtImage")
     )
-    backdrop_image: ChannelImage | None = field(
-        default=None, metadata=field_options(alias="backdropImage")
-    )
-    poster_image: ChannelImage | None = field(
-        default=None, metadata=field_options(alias="posterImage")
-    )
-    square_image: ChannelImage | None = field(
-        default=None, metadata=field_options(alias="squareImage")
-    )
+    backdrop_image: ChannelImage | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    poster_image: ChannelImage | None = field(default=None, metadata=field_options(alias="posterImage"))
+    square_image: ChannelImage | None = field(default=None, metadata=field_options(alias="squareImage"))
 
 
 @dataclass

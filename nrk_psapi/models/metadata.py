@@ -7,8 +7,24 @@ from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
 from .catalog import Image, IndexPoint, Link, Links, Titles  # noqa: TCH001
-from .common import BaseDataClassORJSONMixin, T
+from .common import BaseDataClassORJSONMixin, StrEnum, T
 from .playback import AvailabilityDetailed, Playable  # noqa: TCH001
+
+
+class InteractionPoint(StrEnum):
+    SEEK_TO_POINTS = "seekToPoints"
+    NEXT_UP_POINT = "nextUpPoint"
+    RECOMMEND_NEXT_POINT = "recommendNextPoint"
+
+
+@dataclass
+class Interaction(BaseDataClassORJSONMixin):
+    type: InteractionPoint
+    start_time: float = field(metadata=field_options(alias="startTime"))
+    end_time: float = field(metadata=field_options(alias="endTime"))
+
+    def __str__(self):
+        return f"{self.type}: {self.start_time} - {self.end_time}"
 
 
 @dataclass
@@ -62,14 +78,30 @@ class Poster(BaseDataClassORJSONMixin):
 
 
 @dataclass
+class SkipDialogInfo(BaseDataClassORJSONMixin):
+    start_intro_in_seconds: int = field(metadata=field_options(alias="startIntroInSeconds"))
+    end_intro_in_seconds: int = field(metadata=field_options(alias="endIntroInSeconds"))
+    start_credits_in_seconds: int = field(metadata=field_options(alias="startCreditsInSeconds"))
+    start_intro: timedelta = field(
+        metadata=field_options(alias="startIntro", deserialize=parse_duration, serialize=duration_isoformat)
+    )
+    end_intro: timedelta = field(
+        metadata=field_options(alias="endIntro", deserialize=parse_duration, serialize=duration_isoformat)
+    )
+    start_credits: timedelta = field(
+        metadata=field_options(alias="startCredits", deserialize=parse_duration, serialize=duration_isoformat)
+    )
+
+
+@dataclass
 class Preplay(BaseDataClassORJSONMixin):
     """Represents the preplay information."""
 
     titles: Titles
     description: str
     poster: Poster
-    square_poster: Poster = field(metadata=field_options(alias="squarePoster"))
     index_points: list[IndexPoint] = field(metadata=field_options(alias="indexPoints"))
+    square_poster: Poster | None = field(default=None, metadata=field_options(alias="squarePoster"))
 
 
 @dataclass
@@ -79,6 +111,9 @@ class Manifest(BaseDataClassORJSONMixin):
     _links: Links
     availability_label: str = field(metadata=field_options(alias="availabilityLabel"))
     id: str
+
+    def __str__(self):
+        return f"{self.id} ({self.availability_label})"
 
 
 @dataclass
@@ -115,19 +150,15 @@ class PodcastMetadata(BaseDataClassORJSONMixin):
     preplay: Preplay
     playable: Playable
     source_medium: str = field(metadata=field_options(alias="sourceMedium"))
-    display_aspect_ratio: str | None = field(
-        default=None, metadata=field_options(alias="displayAspectRatio")
+    display_aspect_ratio: str | None = field(default=None, metadata=field_options(alias="displayAspectRatio"))
+    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
+    interaction_points: list[InteractionPoint] | None = field(
+        default_factory=list, metadata=field_options(alias="interactionPoints")
     )
-    non_playable: dict | None = field(
-        default=None, metadata=field_options(alias="nonPlayable")
-    )
-    interaction_points: list | None = field(
-        default=None, metadata=field_options(alias="interactionPoints")
-    )
-    skip_dialog_info: dict | None = field(
+    skip_dialog_info: SkipDialogInfo | None = field(
         default=None, metadata=field_options(alias="skipDialogInfo")
     )
-    interaction: dict | None = None
+    interaction: list[Interaction] | None = field(default_factory=list)
 
     manifests: list[Manifest] = field(default_factory=list)
     podcast: PodcastMetadataEmbedded | None = field(default=None)
