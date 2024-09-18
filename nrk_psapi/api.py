@@ -10,7 +10,6 @@ import socket
 from aiohttp.client import ClientError, ClientResponseError, ClientSession
 from aiohttp.hdrs import METH_GET
 import async_timeout
-import backoff
 import orjson
 from yarl import URL
 
@@ -37,6 +36,7 @@ from .models.pages import (
     Curated,
     CuratedPodcast,
     CuratedSection,
+    Included,
     IncludedSection,
     Page,
     Pages,
@@ -115,7 +115,6 @@ class NrkPodcastAPI:
         """Make a paged request."""
         return await self._request(uri, method, params={"pageSize": page_size, "page": page}, **kwargs)
 
-    @backoff.on_exception(backoff.expo, NrkPsApiConnectionError, max_tries=5, logger=None)
     async def _request(
         self,
         uri: str,
@@ -151,17 +150,16 @@ class NrkPodcastAPI:
             raise NrkPsApiConnectionTimeoutError(
                 "Timeout occurred while connecting to NRK API"
             ) from exception
-        except ClientResponseError as exception:
+        except (
+            ClientError,
+            ClientResponseError,
+            socket.gaierror,
+        ) as exception:
             if exception.status == HTTPStatus.TOO_MANY_REQUESTS:
                 raise NrkPsApiRateLimitError("Too many requests to NRK API. Try again later.") from exception
             if exception.status == HTTPStatus.NOT_FOUND:
                 raise NrkPsApiNotFoundError("Resource not found") from exception
-            raise NrkPsApiError from exception
-        except (
-            ClientError,
-            socket.gaierror,
-        ) as exception:
-            msg = "Error occurred while communicating with NRK API"
+            msg = f"Error occurred while communicating with NRK API: {exception}"
             raise NrkPsApiConnectionError(msg) from exception
 
         content_type = response.headers.get("Content-Type", "")
@@ -182,22 +180,58 @@ class NrkPodcastAPI:
         result = await self._request("ipcheck")
         return IpCheck.from_dict(result["data"])
 
-    async def get_playback_manifest(self, item_id: str) -> PodcastManifest:
-        """Get the manifest for an episode.
+    async def get_playback_manifest(
+        self,
+        item_id: str,
+        *,
+        podcast=False,
+        program=False,
+        channel=False,
+    ) -> PodcastManifest:
+        """Get the manifest for an episode/program/channel.
 
-        :param item_id:
+        :param item_id: Media id
+        :param channel: Media is a channel
+        :param program: Media is a program
+        :param podcast: Media is a podcast
         :rtype: PodcastManifest
         """
-        result = await self._request(f"playback/manifest/{item_id}")
+        if podcast:
+            endpoint = "/podcast"
+        elif program:
+            endpoint = "/program"
+        elif channel:
+            endpoint = "/channel"
+        else:
+            endpoint = ""
+        result = await self._request(f"playback/manifest{endpoint}/{item_id}")
         return PodcastManifest.from_dict(result)
 
-    async def get_playback_metadata(self, item_id: str) -> PodcastMetadata:
-        """Get the metadata for an episode.
+    async def get_playback_metadata(
+        self,
+        item_id: str,
+        *,
+        podcast=False,
+        program=False,
+        channel=False,
+    ) -> PodcastMetadata:
+        """Get the metadata for an episode/program/channel.
 
-        :param item_id:
+        :param item_id: Media id
+        :param channel: Media is a channel
+        :param program: Media is a program
+        :param podcast: Media is a podcast
         :rtype: PodcastMetadata
         """
-        result = await self._request(f"playback/metadata/{item_id}")
+        if podcast:
+            endpoint = "/podcast"
+        elif program:
+            endpoint = "/program"
+        elif channel:
+            endpoint = "/channel"
+        else:
+            endpoint = ""
+        result = await self._request(f"playback/metadata{endpoint}/{item_id}")
         return PodcastMetadata.from_dict(result)
 
     async def get_episode(self, podcast_id: str, episode_id: str) -> Episode:
@@ -436,7 +470,7 @@ class NrkPodcastAPI:
         result = await self._request("radio/pages")
         return Pages.from_dict(result)
 
-    async def radio_page(self, page_id: str, section_id: str | None = None) -> Page:
+    async def radio_page(self, page_id: str, section_id: str | None = None) -> Page | Included | None:
         """Get radio page.
 
         :param page_id: Name of the page, e.g. 'discover'
@@ -444,11 +478,15 @@ class NrkPodcastAPI:
         :type section_id: str, optional
         :rtype: Page
         """
-        uri = f"radio/pages/{page_id}"
-        if section_id:
-            uri += f"/{section_id}"
-        result = await self._request(uri)
-        return Page.from_dict(result)
+        result = await self._request(f"radio/pages/{page_id}")
+        page = Page.from_dict(result)
+        if section_id is None:
+            return page
+
+        for section in page.sections:
+            if isinstance(section, IncludedSection) and section.included.section_id == section_id:
+                return section.included
+        return None
 
     async def curated_podcasts(self) -> Curated:
         """Get curated podcasts.
