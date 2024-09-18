@@ -6,7 +6,7 @@ from datetime import datetime, timedelta  # noqa: TCH003
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
-from .catalog import Link  # noqa: TCH001
+from .catalog import Link
 from .common import BaseDataClassORJSONMixin, DisplayAspectRatioVideo, StrEnum
 
 
@@ -20,20 +20,36 @@ class PlayableStreamingMode(StrEnum):
     ONDEMAND = "onDemand"
 
 
+class Playability(StrEnum):
+    PLAYABLE = "playable"
+    NON_PLAYABLE = "nonPlayable"
+
+
+@dataclass
+class Live(BaseDataClassORJSONMixin):
+    is_ongoing: bool = field(metadata=field_options(alias="isOngoing"))
+    type: str
+    transmission_interval: dict | None = field(
+        default=None, metadata=field_options(alias="transmissionInterval")
+    )
+
+
 @dataclass
 class AvailabilityDetailed(BaseDataClassORJSONMixin):
     """Represents the availability information."""
 
     information: str
     is_geo_blocked: bool = field(metadata=field_options(alias="isGeoBlocked"))
-    on_demand: OnDemand = field(metadata=field_options(alias="onDemand"))
     external_embedding_allowed: bool = field(metadata=field_options(alias="externalEmbeddingAllowed"))
-    live: dict[str, str] | None = None
+    on_demand: OnDemand | None = field(default=None, metadata=field_options(alias="onDemand"))
+    live: Live | None = None
 
     def __str__(self):
-        if self.information:
-            return self.information
-        return str(self.on_demand)
+        if self.on_demand:
+            return str(self.on_demand)
+        if self.live:
+            return str(self.live)
+        return self.information
 
 
 @dataclass
@@ -170,6 +186,21 @@ class Playable(BaseDataClassORJSONMixin):
 
 
 @dataclass
+class NonPlayable(BaseDataClassORJSONMixin):
+    """Represents the non-playable content information."""
+
+    reason: str
+    message_type: str | None = field(default=None, metadata=field_options(alias="messageType"))
+    end_user_message: str | None = field(default=None, metadata=field_options(alias="endUserMessage"))
+    end_user_message_supplement: str | None = field(
+        default=None, metadata=field_options(alias="endUserMessageSupplement")
+    )
+    user_action: str | None = field(default=None, metadata=field_options(alias="userAction"))
+    help_url: str | None = field(default=None, metadata=field_options(alias="helpUrl"))
+    available_abroad_url: str | None = field(default=None, metadata=field_options(alias="availableAbroadUrl"))
+
+
+@dataclass
 class SkipDialogInfo(BaseDataClassORJSONMixin):
     start_intro_in_seconds: float = field(metadata=field_options(alias="startIntroInSeconds"))
     end_intro_in_seconds: float = field(metadata=field_options(alias="endIntroInSeconds"))
@@ -185,13 +216,13 @@ class PodcastManifest(BaseDataClassORJSONMixin):
 
     _links: Links
     id: str
-    playability: str
+    playability: Playability
     streaming_mode: PlayableStreamingMode = field(metadata=field_options(alias="streamingMode"))
     availability: AvailabilityDetailed
     statistics: Statistics
-    playable: Playable
     source_medium: PlayableSourceMedium = field(metadata=field_options(alias="sourceMedium"))
-    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
+    playable: Playable | None = field(default=None)
+    non_playable: NonPlayable | None = field(default=None, metadata=field_options(alias="nonPlayable"))
     display_aspect_ratio: DisplayAspectRatioVideo | None = field(
         default=None, metadata=field_options(alias="displayAspectRatio")
     )

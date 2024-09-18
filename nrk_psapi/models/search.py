@@ -8,7 +8,7 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
-from .catalog import Image, Link  # noqa: TCH001
+from .catalog import Image, Link
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 SingleLetter = Literal[

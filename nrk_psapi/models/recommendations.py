@@ -9,7 +9,7 @@ from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
-from .catalog import Links, Titles, WebImage  # noqa: TCH001
+from .catalog import Links, Titles, WebImage
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 

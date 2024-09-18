@@ -23,12 +23,15 @@ def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any
     return items
 
 
-def sanitize_string(s: str):
+def sanitize_string(s: str, delimiter: str = "_"):
     """Sanitize a string to be used as a URL parameter."""
 
-    s = s.lower().replace(" ", "_")
+    s = s.lower().replace(" ", delimiter)
     s = s.replace("æ", "ae").replace("ø", "oe").replace("å", "aa")
-    return re.sub(r"^[0-9_]+", "", re.sub(r"[^a-z0-9_]", "", s))[:50].rstrip("_")
+    return re.sub(
+        rf"^[0-9{delimiter}]+", "",
+        re.sub(rf"[^a-z0-9{delimiter}]", "", s)
+    )[:50].rstrip(delimiter)
 
 
 @cache

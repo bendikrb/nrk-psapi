@@ -6,9 +6,15 @@ from datetime import datetime, timedelta  # noqa: TCH003
 from isodate import duration_isoformat, parse_duration
 from mashumaro import field_options
 
-from .catalog import Image, IndexPoint, Link, Links, Titles  # noqa: TCH001
+from .catalog import Image, IndexPoint, Link, Links, Titles
 from .common import BaseDataClassORJSONMixin, StrEnum, T
-from .playback import AvailabilityDetailed, Playable  # noqa: TCH001
+from .playback import (
+    AvailabilityDetailed,
+    NonPlayable,
+    Playability,
+    Playable,
+    PlayableSourceMedium,
+)
 
 
 class InteractionPoint(StrEnum):
@@ -44,10 +50,10 @@ class LegalAgeBody(BaseDataClassORJSONMixin):
     """Represents the body of legal age information."""
 
     status: str
-    rating: LegalAgeRating
+    rating: LegalAgeRating | None = None
 
     def __str__(self) -> str:
-        return f"{self.rating}"
+        return f"{self.rating or self.status}"
 
 
 @dataclass
@@ -140,18 +146,18 @@ class PodcastMetadata(BaseDataClassORJSONMixin):
 
     _links: Links
     id: str
-    playability: str
+    playability: Playability
     streaming_mode: str = field(metadata=field_options(alias="streamingMode"))
-    duration: timedelta = field(
-        metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
-    )
     legal_age: LegalAge = field(metadata=field_options(alias="legalAge"))
     availability: AvailabilityDetailed
     preplay: Preplay
-    playable: Playable
-    source_medium: str = field(metadata=field_options(alias="sourceMedium"))
+    source_medium: PlayableSourceMedium = field(metadata=field_options(alias="sourceMedium"))
+    duration: timedelta | None = field(
+        default=None, metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
+    )
     display_aspect_ratio: str | None = field(default=None, metadata=field_options(alias="displayAspectRatio"))
-    non_playable: dict | None = field(default=None, metadata=field_options(alias="nonPlayable"))
+    playable: Playable | None = field(default=None)
+    non_playable: NonPlayable | None = field(default=None, metadata=field_options(alias="nonPlayable"))
     interaction_points: list[InteractionPoint] | None = field(
         default_factory=list, metadata=field_options(alias="interactionPoints")
     )

@@ -1,0 +1,6 @@
+# This extend our general Ruff rules specifically for models
+extend = "../../pyproject.toml"
+
+lint.extend-ignore = [
+  "TCH001",
+]

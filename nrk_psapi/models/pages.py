@@ -10,7 +10,9 @@ from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 from rich.table import Table
 
-from .catalog import Link, Titles, WebImage  # noqa: TCH001
+from nrk_psapi.utils import sanitize_string
+
+from .catalog import Link, Titles, WebImage
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 if TYPE_CHECKING:
@@ -541,8 +543,12 @@ class PagePlug(Plug):
 
 @dataclass
 class Included(BaseDataClassORJSONMixin):
+    section_id: str = field(init=False)
     title: str
     plugs: list[Plug]
+
+    def __post_init__(self):
+        self.section_id = sanitize_string(self.title, "-")
 
 
 @dataclass

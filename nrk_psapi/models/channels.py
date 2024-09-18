@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from mashumaro import field_options
 
-from .catalog import Image, Links  # noqa: TCH001
+from .catalog import Image, Links
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 
