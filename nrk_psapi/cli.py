@@ -673,10 +673,10 @@ async def get_episode(args):
         )
     if args.metadata:
         console.rule("Metadata")
-        await get_metadata(args.episode_id)
+        await get_metadata(args)
     if args.manifest:
         console.rule("Manifest")
-        await get_manifest(args.episode_id)
+        await get_manifest(args)
 
 
 async def get_program(args):
@@ -703,16 +703,23 @@ async def get_program(args):
 
     if args.metadata:
         console.rule("Metadata")
-        await get_metadata(args.program_id)
+        await get_metadata(args)
     if args.manifest:
         console.rule("Manifest")
-        await get_manifest(args.program_id)
+        await get_manifest(args)
 
 
-async def get_manifest(item_id: str):
+async def get_manifest(args):
     """Get manifest."""
     async with NrkPodcastAPI() as client:
-        manifest = await client.get_playback_manifest(item_id)
+        if "program_id" in args:
+            manifest = await client.get_playback_manifest(args.program_id, program=True)
+        elif "episode_id" in args:
+            manifest = await client.get_playback_manifest(args.episode_id, podcast=True)
+        elif "channel_id" in args:
+            manifest = await client.get_playback_manifest(args.channel_id, channel=True)
+        else:
+            raise AttributeError("Unable to determine item_id")
         console.print(
             pretty_dataclass(
                 manifest,
@@ -724,10 +731,17 @@ async def get_manifest(item_id: str):
         )
 
 
-async def get_metadata(item_id: str):
+async def get_metadata(args: argparse.Namespace):
     """Get metadata."""
     async with NrkPodcastAPI() as client:
-        metadata = await client.get_playback_metadata(item_id)
+        if "program_id" in args:
+            metadata = await client.get_playback_metadata(args.program_id, program=True)
+        elif "episode_id" in args:
+            metadata = await client.get_playback_metadata(args.episode_id, podcast=True)
+        elif "channel_id" in args:
+            metadata = await client.get_playback_metadata(args.channel_id, channel=True)
+        else:
+            raise AttributeError("Unable to determine item_id")
         console.print(
             pretty_dataclass(
                 metadata,
