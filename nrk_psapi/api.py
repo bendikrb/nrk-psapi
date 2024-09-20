@@ -13,6 +13,7 @@ import async_timeout
 import orjson
 from yarl import URL
 
+from .caching import cache, disable_cache
 from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
 from .exceptions import (
     NrkPsApiConnectionError,
@@ -51,7 +52,11 @@ from .models.search import (
     SearchResultType,
     SingleLetter,
 )
-from .utils import fetch_file_info, get_nested_items, sanitize_string
+from .utils import (
+    fetch_file_info,
+    get_nested_items,
+    sanitize_string,
+)
 
 
 @dataclass
@@ -59,17 +64,24 @@ class NrkPodcastAPI:
     """NrkPodcastAPI.
 
     :param user_agent: User agent string
-    :param request_timeout: Request timeout in seconds, defaults to 8
+    :param enable_cache: Enable caching, defaults to True
+    :param request_timeout: Request timeout in seconds, defaults to 15
     :param session: Optional web session to use for requests
     :type session: ClientSession, optional
     """
 
     user_agent: str | None = None
+    enable_cache: bool = True
 
-    request_timeout: int = 8
+    request_timeout: int = 15
     session: ClientSession | None = None
 
     _close_session: bool = False
+
+    def __post_init__(self):
+        if not self.enable_cache:
+            disable_cache()
+            _LOGGER.debug("Cache disabled")
 
     @property
     def request_header(self) -> dict[str, str]:
@@ -84,12 +96,12 @@ class NrkPodcastAPI:
         uri: str,
         method: str = METH_GET,
         items_key: str | None = None,
+        page_size: int = 50,
         **kwargs,
     ) -> list:
         """Make a paged request."""
         results = []
         page = 1
-        page_size = 50
 
         while True:
             data = await self._request_paged(uri, method, page_size=page_size, page=page, **kwargs)
@@ -123,19 +135,23 @@ class NrkPodcastAPI:
     ) -> str | dict[any, any] | list[any] | None:
         """Make a request."""
         url = URL(PSAPI_BASE_URL).join(URL(uri))
-        _LOGGER.debug("Executing %s API request to %s.", method, url)
         headers = kwargs.get("headers")
         headers = self.request_header if headers is None else dict(headers)
 
-        _LOGGER.debug("With headers: %s", headers)
+        params = kwargs.get("params")
+        if params is not None:
+            kwargs.update(params={k: v for k, v in params.items() if v is not None})
+
         if self.session is None:
             self.session = ClientSession()
             _LOGGER.debug("New session created.")
             self._close_session = True
 
-        params = kwargs.get("params")
-        if params is not None:
-            kwargs.update(params={k: v for k, v in params.items() if v is not None})
+        _LOGGER.debug(
+            "Executing %s API request to %s.",
+            method,
+            url.with_query(kwargs.get("params")),
+        )
 
         try:
             async with async_timeout.timeout(self.request_timeout):
@@ -180,6 +196,7 @@ class NrkPodcastAPI:
         result = await self._request("ipcheck")
         return IpCheck.from_dict(result["data"])
 
+    @cache(ignore=(0,))
     async def get_playback_manifest(
         self,
         item_id: str,
@@ -207,6 +224,7 @@ class NrkPodcastAPI:
         result = await self._request(f"playback/manifest{endpoint}/{item_id}")
         return PodcastManifest.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_playback_metadata(
         self,
         item_id: str,
@@ -234,6 +252,7 @@ class NrkPodcastAPI:
         result = await self._request(f"playback/metadata{endpoint}/{item_id}")
         return PodcastMetadata.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_episode(self, podcast_id: str, episode_id: str) -> Episode:
         """Get episode.
 
@@ -244,6 +263,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}")
         return Episode.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_series_type(self, series_id: str) -> SeriesType:
         """Get series type.
 
@@ -253,6 +273,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/series/{series_id}/type")
         return SeriesType.from_str(result["seriesType"])
 
+    @cache(ignore=(0,))
     async def get_podcast_type(self, podcast_id: str) -> SeriesType:
         """Get podcast type.
 
@@ -262,6 +283,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/type")
         return SeriesType.from_str(result["seriesType"])
 
+    @cache(ignore=(0,))
     async def get_series_season(self, series_id: str, season_id: str) -> Season:
         """Get series season.
 
@@ -272,6 +294,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/series/{series_id}/seasons/{season_id}")
         return Season.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_series_episodes(self, series_id: str, season_id: str | None = None) -> list[Episode]:
         """Get series episodes.
 
@@ -289,6 +312,7 @@ class NrkPodcastAPI:
         )
         return [Episode.from_dict(e) for e in result]
 
+    @cache(ignore=(0,))
     async def get_live_channel(self, channel_id: str) -> Channel:
         """Get live channel.
 
@@ -298,6 +322,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/channels/livebuffer/{channel_id}")
         return Channel.from_dict(result["channel"])
 
+    @cache(ignore=(0,))
     async def get_program(self, program_id: str) -> Program:
         """Get program.
 
@@ -307,6 +332,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/programs/{program_id}")
         return Program.from_dict(result)
 
+    # @cache(ignore=(0,))
     async def get_podcast(self, podcast_id: str) -> Podcast:
         """Get podcast.
 
@@ -316,6 +342,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}")
         return Podcast.from_dict(result)
 
+    # @cache(ignore=(0,))
     async def get_podcasts(self, podcast_ids: list[str]) -> list[Podcast]:
         """Get podcasts.
 
@@ -326,6 +353,7 @@ class NrkPodcastAPI:
         results = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
         return list(results)
 
+    @cache(ignore=(0,))
     async def get_podcast_season(self, podcast_id: str, season_id: str) -> Season:
         """Get podcast season.
 
@@ -336,6 +364,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}")
         return Season.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_podcast_episodes(self, podcast_id: str, season_id: str | None = None) -> list[Episode]:
         """Get podcast episodes.
 
@@ -353,6 +382,7 @@ class NrkPodcastAPI:
         )
         return [Episode.from_dict(e) for e in result]
 
+    @cache(ignore=(0,))
     async def get_all_podcasts(self) -> list[Series]:
         """Get all podcasts.
 
@@ -366,6 +396,7 @@ class NrkPodcastAPI:
         )
         return [Series.from_dict(s) for s in result["series"]]
 
+    @cache(ignore=(0,))
     async def get_series(self, series_id: str) -> Podcast:
         """Get series.
 
@@ -375,6 +406,7 @@ class NrkPodcastAPI:
         result = await self._request(f"radio/catalog/series/{series_id}")
         return Podcast.from_dict(result)
 
+    @cache(ignore=(0,))
     async def get_recommendations(
         self,
         item_id: str,
@@ -398,6 +430,7 @@ class NrkPodcastAPI:
         )
         return Recommendation.from_dict(result)
 
+    @cache(ignore=(0,))
     async def browse(
         self,
         letter: SingleLetter,
@@ -462,6 +495,7 @@ class NrkPodcastAPI:
         """
         return await self._request("/radio/search/search/suggest", params={"q": query})
 
+    @cache(ignore=(0,))
     async def radio_pages(self) -> Pages:
         """Get radio pages.
 
@@ -470,6 +504,7 @@ class NrkPodcastAPI:
         result = await self._request("radio/pages")
         return Pages.from_dict(result)
 
+    @cache(ignore=(0,))
     async def radio_page(self, page_id: str, section_id: str | None = None) -> Page | Included | None:
         """Get radio page.
 
@@ -488,6 +523,7 @@ class NrkPodcastAPI:
                 return section.included
         return None
 
+    @cache(ignore=(0,))
     async def curated_podcasts(self) -> Curated:
         """Get curated podcasts.
         This is a wrapper around :meth:`radio_page`, with the section_id set to "podcast" and
@@ -520,6 +556,7 @@ class NrkPodcastAPI:
                     )
         return Curated(sections=sections)
 
+    @cache(ignore=(0,))
     async def fetch_file_info(self, url: URL | str):
         """Proxies call to `utils.fetch_file_info`, passing on self.session."""
         return await fetch_file_info(url, self.session)

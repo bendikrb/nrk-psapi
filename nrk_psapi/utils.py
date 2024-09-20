@@ -4,7 +4,8 @@ import re
 from typing import TYPE_CHECKING
 
 from aiohttp import ClientSession
-from asyncstdlib import cache
+
+from nrk_psapi.const import LOGGER as _LOGGER
 
 if TYPE_CHECKING:
     from yarl import URL
@@ -28,13 +29,9 @@ def sanitize_string(s: str, delimiter: str = "_"):
 
     s = s.lower().replace(" ", delimiter)
     s = s.replace("æ", "ae").replace("ø", "oe").replace("å", "aa")
-    return re.sub(
-        rf"^[0-9{delimiter}]+", "",
-        re.sub(rf"[^a-z0-9{delimiter}]", "", s)
-    )[:50].rstrip(delimiter)
+    return re.sub(rf"^[0-9{delimiter}]+", "", re.sub(rf"[^a-z0-9{delimiter}]", "", s))[:50].rstrip(delimiter)
 
 
-@cache
 async def fetch_file_info(url: URL | str, session: ClientSession | None = None) -> tuple[int, str]:
     """Retrieve content-length and content-type for the given URL."""
     close_session = False
@@ -42,7 +39,8 @@ async def fetch_file_info(url: URL | str, session: ClientSession | None = None) 
         session = ClientSession()
         close_session = True
 
-    response = await session.head(url)
+    _LOGGER.debug("Fetching file info from %s", url)
+    response = await session.head(url, allow_redirects=True)
     content_length = response.headers.get("Content-Length")
     mime_type = response.headers.get("Content-Type")
     if close_session:

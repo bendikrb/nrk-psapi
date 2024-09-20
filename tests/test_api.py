@@ -78,7 +78,7 @@ async def test_ipcheck(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.ipcheck()
         assert isinstance(result, IpCheck)
         assert result.country_code == fixture["data"]["countryCode"]
@@ -105,7 +105,7 @@ async def test_get_series(
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_series(series_id)
         assert fixture["_links"]["self"]["href"] == uri
         assert isinstance(result, Podcast)
@@ -131,7 +131,7 @@ async def test_get_umbrella_podcast(
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_podcast(podcast_id)
 
         # assert uri == fixture_data["_links"]["self"]["href"]
@@ -159,7 +159,7 @@ async def test_get_standard_podcast(
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         results = await nrk_api.get_podcasts([podcast_id])
         result = results[0]
         # uri, fixture_data = mock_client_session[-1]
@@ -172,7 +172,7 @@ async def test_get_standard_podcast(
 
 
 @pytest.mark.parametrize(
-    "season",
+    "podcast_id,season_id",
     [
         ("tore_sagens_podkast", None),
         ("tore_sagens_podkast", "2021"),
@@ -180,25 +180,32 @@ async def test_get_standard_podcast(
 )
 async def test_get_podcast_episodes(
     aresponses: ResponsesMockServer,
-    season: tuple[str, str],
+    podcast_id,
+    season_id,
 ):
-    podcast_id, season_id = season
     if season_id is not None:
         uri = f"/radio/catalog/podcast/{podcast_id}/seasons/{season_id}/episodes"
         fixture_name = f"radio_catalog_podcast_{podcast_id}_seasons_{season_id}_episodes"
+        aresponses.add(
+            URL(PSAPI_BASE_URL).host,
+            uri,
+            "GET",
+            json_response(data=load_fixture_json(fixture_name)),
+        )
     else:
         uri = f"/radio/catalog/podcast/{podcast_id}/episodes"
-        fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes"
+        for page_no in range(1, 3):
+            fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes_page{page_no}"
+            aresponses.add(
+                URL(PSAPI_BASE_URL).host,
+                f"{uri}?pageSize=50&page={page_no}",
+                "GET",
+                json_response(data=load_fixture_json(fixture_name)),
+                match_querystring=True,
+            )
 
-    fixture = load_fixture_json(fixture_name)
-    aresponses.add(
-        URL(PSAPI_BASE_URL).host,
-        uri,
-        "GET",
-        json_response(data=fixture),
-    )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_podcast_episodes(podcast_id, season_id)
         assert isinstance(result, list)
         assert len(result) > 0
@@ -206,16 +213,16 @@ async def test_get_podcast_episodes(
 
 
 @pytest.mark.parametrize(
-    "season",
+    "podcast_id,season_id",
     [
         ("hele_historien", "alene-i-atlanteren"),
     ],
 )
 async def test_get_podcast_season(
     aresponses: ResponsesMockServer,
-    season: tuple[str, str],
+    podcast_id,
+    season_id,
 ):
-    podcast_id, season_id = season
     fixture_name = f"radio_catalog_podcast_{podcast_id}_seasons_{season_id}"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
@@ -225,7 +232,7 @@ async def test_get_podcast_season(
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_podcast_season(podcast_id, season_id)
         assert isinstance(result, Season)
 
@@ -240,7 +247,7 @@ async def test_get_all_podcasts(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_all_podcasts()
         assert isinstance(result, list)
         assert len(result) > 0
@@ -263,7 +270,7 @@ async def test_get_series_type(aresponses: ResponsesMockServer, series_id: str):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_series_type(series_id)
         assert isinstance(result, SeriesType)
         assert result == SeriesType.STANDARD
@@ -271,16 +278,16 @@ async def test_get_series_type(aresponses: ResponsesMockServer, series_id: str):
 
 
 @pytest.mark.parametrize(
-    "season",
+    "series_id,season_id",
     [
         ("karsten-og-petra-radio", "200511"),
     ],
 )
 async def test_get_series_season(
     aresponses: ResponsesMockServer,
-    season: tuple[str, str],
+    series_id,
+    season_id,
 ):
-    series_id, season_id = season
     fixture_name = f"radio_catalog_series_{series_id}_seasons_{season_id}"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
@@ -290,7 +297,7 @@ async def test_get_series_season(
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_series_season(series_id, season_id)
         assert isinstance(result, Season)
         assert result.type == PodcastType.SERIES
@@ -298,7 +305,7 @@ async def test_get_series_season(
 
 
 @pytest.mark.parametrize(
-    "season",
+    "series_id,season_id",
     [
         ("karsten-og-petra-radio", None),
         ("karsten-og-petra-radio", "200511"),
@@ -306,9 +313,9 @@ async def test_get_series_season(
 )
 async def test_get_series_episodes(
     aresponses: ResponsesMockServer,
-    season: tuple[str, str],
+    series_id,
+    season_id,
 ):
-    series_id, season_id = season
     if season_id is not None:
         uri = f"/radio/catalog/series/{series_id}/seasons/{season_id}/episodes"
         fixture_name = f"radio_catalog_series_{series_id}_seasons_{season_id}_episodes"
@@ -324,7 +331,7 @@ async def test_get_series_episodes(
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_series_episodes(series_id, season_id)
         assert isinstance(result, list)
         assert len(result) > 0
@@ -347,7 +354,7 @@ async def test_get_podcast_type(aresponses: ResponsesMockServer, podcast_id: str
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_podcast_type(podcast_id)
         assert isinstance(result, SeriesType)
         assert result == SeriesType.UMBRELLA
@@ -370,7 +377,7 @@ async def test_get_recommendations(aresponses: ResponsesMockServer, item_id: str
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_recommendations(item_id)
         assert isinstance(result, Recommendation)
 
@@ -386,7 +393,7 @@ async def test_browse(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.browse(letter="A", per_page=10)
         assert isinstance(result, PodcastSearchResponse)
         assert isinstance(result.series, list)
@@ -404,7 +411,7 @@ async def test_search(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.search(query="beyer", per_page=10)
         assert isinstance(result, SearchResponse)
 
@@ -420,14 +427,14 @@ async def test_search_suggest(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.search_suggest("bren")
         assert isinstance(result, list)
         assert len(result) > 0
 
 
 @pytest.mark.parametrize(
-    "media",
+    "media_type,media_id",
     [
         ("podcast", "l_d3d4424e-e692-4ab8-9442-4ee6929ab82a"),
         ("channel", "p1"),
@@ -435,8 +442,7 @@ async def test_search_suggest(aresponses: ResponsesMockServer):
         (None, "l_d3d4424e-e692-4ab8-9442-4ee6929ab82a"),
     ],
 )
-async def test_get_metadata(aresponses: ResponsesMockServer, media: tuple[str, str]):
-    media_type, media_id = media
+async def test_get_metadata(aresponses: ResponsesMockServer, media_type, media_id):
     podcast, channel, program = (media_type == "podcast", media_type == "channel", media_type == "program")
     if media_type is None:
         media_type = "podcast"
@@ -455,7 +461,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, media: tuple[str, s
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_playback_metadata(
             media_id,
             podcast=podcast,
@@ -473,7 +479,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, media: tuple[str, s
 
 
 @pytest.mark.parametrize(
-    "media",
+    "media_type,media_id",
     [
         ("podcast", "l_9a443e59-5c18-45d8-843e-595c18b5d849"),
         ("channel", "p1"),
@@ -481,8 +487,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, media: tuple[str, s
         (None, "l_9a443e59-5c18-45d8-843e-595c18b5d849"),
     ],
 )
-async def test_get_manifest(aresponses: ResponsesMockServer, media: tuple[str, str]):
-    media_type, media_id = media
+async def test_get_manifest(aresponses: ResponsesMockServer, media_type, media_id):
     podcast, channel, program = (media_type == "podcast", media_type == "channel", media_type == "program")
     if media_type is None:
         media_type = "podcast"
@@ -501,7 +506,7 @@ async def test_get_manifest(aresponses: ResponsesMockServer, media: tuple[str, s
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_playback_manifest(
             media_id,
             podcast=podcast,
@@ -512,16 +517,16 @@ async def test_get_manifest(aresponses: ResponsesMockServer, media: tuple[str, s
 
 
 @pytest.mark.parametrize(
-    "episode",
+    "podcast_id,episode_id",
     [
         ("desken_brenner", "l_8c60be4d-ce0b-41d0-a0be-4dce0b81d01a"),
     ],
 )
 async def test_get_episode(
     aresponses: ResponsesMockServer,
-    episode: tuple[str, str],
+    podcast_id,
+    episode_id,
 ):
-    podcast_id, episode_id = episode
     fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes_{episode_id}"
     uri = f"/radio/catalog/podcast/{podcast_id}/episodes/{episode_id}"
     fixture = load_fixture_json(fixture_name)
@@ -532,7 +537,7 @@ async def test_get_episode(
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_episode(podcast_id, episode_id)
         assert uri == fixture["_links"]["self"]["href"]
         assert isinstance(result, Episode)
@@ -554,7 +559,7 @@ async def test_get_live_channel(aresponses: ResponsesMockServer, channel_id: str
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_live_channel(channel_id)
         assert isinstance(result, Channel)
 
@@ -575,7 +580,7 @@ async def test_get_program(aresponses: ResponsesMockServer, program_id: str):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.get_program(program_id)
         assert isinstance(result, Program)
 
@@ -591,7 +596,7 @@ async def test_curated_podcasts(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.curated_podcasts()
         assert isinstance(result, Curated)
         assert isinstance(result.sections, list)
@@ -609,7 +614,7 @@ async def test_pages(aresponses: ResponsesMockServer):
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.radio_pages()
         assert isinstance(result, Pages)
         assert all(isinstance(item, PageListItem) for item in result.pages)
@@ -618,15 +623,18 @@ async def test_pages(aresponses: ResponsesMockServer):
 
 
 @pytest.mark.parametrize(
-    "page",
+    "page_id,section_id",
     [
         ("podcast", None),
         ("podcast", "damer-som-satte-spor"),
         ("podcast", "nonexistent"),
     ],
 )
-async def test_podcast_page(aresponses: ResponsesMockServer, page: tuple[str, str]):
-    page_id, section_id = page
+async def test_podcast_page(
+    aresponses: ResponsesMockServer,
+    page_id,
+    section_id,
+):
     fixture_name = f"radio_pages_{page_id}"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
@@ -636,7 +644,7 @@ async def test_podcast_page(aresponses: ResponsesMockServer, page: tuple[str, st
         json_response(data=fixture),
     )
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         result = await nrk_api.radio_page(page_id, section_id)
         if section_id == "nonexistent":
             assert result is None
@@ -676,6 +684,38 @@ async def test_podcast_page(aresponses: ResponsesMockServer, page: tuple[str, st
             if isinstance(plug, StandaloneProgramPlug):
                 assert len(plug.id) > 0
                 assert len(plug.program.title) > 0
+
+
+@pytest.mark.parametrize(
+    "expected_content_length,expected_content_type",
+    [
+        ("1234", "audio/mpeg"),
+    ],
+)
+async def test_fetch_file_info(
+    aresponses: ResponsesMockServer,
+    expected_content_length,
+    expected_content_type,
+):
+    url = URL(f"{PSAPI_BASE_URL}/file")
+
+    aresponses.add(
+        url.host,
+        url.path,
+        "HEAD",
+        aresponses.Response(
+            headers={
+                "Content-Length": expected_content_length,
+                "Content-Type": expected_content_type,
+            },
+        ),
+    )
+    async with aiohttp.ClientSession() as session:
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
+        content_length, content_type = await nrk_api.fetch_file_info(URL(url))
+
+    assert content_length == int(expected_content_length)
+    assert content_type == expected_content_type
 
 
 async def test_internal_session(aresponses: ResponsesMockServer):
@@ -727,7 +767,7 @@ async def test_http_error400(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         with pytest.raises(NrkPsApiError):
             assert await nrk_api._request("ipcheck")
 
@@ -742,7 +782,7 @@ async def test_http_error404(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         with pytest.raises(NrkPsApiNotFoundError):
             assert await nrk_api._request("ipcheck")
 
@@ -757,7 +797,7 @@ async def test_http_error429(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         with pytest.raises(NrkPsApiRateLimitError):
             assert await nrk_api._request("ipcheck")
 
@@ -772,7 +812,7 @@ async def test_unexpected_response(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         with pytest.raises(NrkPsApiError):
             assert await nrk_api._request("ipcheck")
 
