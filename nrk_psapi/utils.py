@@ -10,6 +10,8 @@ from nrk_psapi.const import LOGGER as _LOGGER
 if TYPE_CHECKING:
     from yarl import URL
 
+    from nrk_psapi.models import Image
+
 
 def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any]]:
     """Get nested items from a dictionary based on the provided items_key."""
@@ -22,6 +24,14 @@ def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any
         raise TypeError(f"Expected a list at '{items_key}', but got {type(items)}")
 
     return items
+
+
+def get_image(images: list[Image], min_size: int | None = None) -> Image | None:
+    candidates = [img for img in images if img.width is not None]
+    if min_size is None:
+        candidates.sort(key=lambda img: img.width, reverse=True)
+        return candidates[0] if candidates else None
+    return next((img for img in candidates if img.width >= min_size), None)
 
 
 def sanitize_string(s: str, delimiter: str = "_"):

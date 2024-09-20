@@ -7,9 +7,11 @@ import asyncio
 from dataclasses import fields
 import logging
 import re
+from _io import TextIOWrapper
 from typing import TYPE_CHECKING, Callable
 
 from rich import print as rprint
+from rich.box import SIMPLE
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
@@ -29,6 +31,7 @@ from nrk_psapi.models.search import (
     SearchResponseResultsResult,
     SearchResultType,
 )
+from nrk_psapi.rss.feed import NrkPodcastFeed
 
 if TYPE_CHECKING:
     from nrk_psapi.models.common import BaseDataClassORJSONMixin
@@ -187,7 +190,11 @@ def header_panel(title: str, subtitle: str):
         title,
         subtitle,
     )
-    return Panel(grid)
+    return Panel(
+        grid,
+        style="white on dark_red",
+        box=SIMPLE,
+    )
 
 
 def highlight_context(
@@ -367,6 +374,21 @@ def main_parser() -> argparse.ArgumentParser:
     recommendations_parser = subparsers.add_parser("recommendations", description="Get recommendations.")
     recommendations_parser.add_argument("podcast_id", type=str, help="Podcast id.")
     recommendations_parser.set_defaults(func=get_recommendations)
+
+    #
+    # RSS
+    #
+    rss_parser = subparsers.add_parser("rss", description="Get RSS feed.")
+    rss_parser.add_argument("podcast_id", type=str, help="Podcast id.")
+    rss_parser.add_argument("output_path", type=argparse.FileType("w", encoding="utf-8"), help="Output path.")
+    rss_parser.add_argument("--base_url", type=str, help="Base URL.")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="The number of episodes to include in the feed. Default is all episodes.",
+    )
+    rss_parser.set_defaults(func=get_rss_feed)
 
     #
     # Search
@@ -649,6 +671,18 @@ async def get_recommendations(args):
             )
 
 
+async def get_rss_feed(args):
+    """Get RSS feed."""
+
+    output_file: TextIOWrapper = args.output_path
+    async with NrkPodcastAPI() as client:
+        rss = NrkPodcastFeed(client, args.base_url)
+        feed = await rss.build_podcast_rss(args.podcast_id, args.limit)
+        xml = feed.rss()
+        output_file.write(xml)
+        console.print(f"Wrote {len(xml)} bytes to {output_file.name}")
+
+
 async def get_episode(args):
     """Get episode."""
     async with NrkPodcastAPI() as client:
@@ -820,43 +854,45 @@ async def search(args):
         search_results = await client.search(
             args.query, per_page=args.limit, page=args.page, search_type=args.type
         )
+        total_counts = search_results.total_count
         for field in fields(search_results.results):
             field_value: SearchResponseResultsResult = getattr(search_results.results, field.name)
             if len(field_value.results) > 0:
-                # noinspection PyTypeChecker
-                res_fields = fields(field_value.results[0])
-                console.print([f.name for f in res_fields])
-            console.print(
-                pretty_dataclass_list(
-                    field_value.results,
-                    title=field.name,
-                    hidden_fields=[
-                        "id",
-                        "type",
-                        "images",
-                        "square_images",
-                        "score",
-                        # "highlights",
-                        "description",
-                        "date",
-                        "series_title",
-                        "season_id",
-                    ],
-                    field_formatters={
-                        "highlights": pretty_highlights,
-                    },
-                    field_widths={
-                        "highlights": 50,
-                    },
-                    field_order=[
-                        "id",
-                        "episode_id",
-                        "series_id",
-                        "title",
-                        "highlights",
-                    ],
-                ),
-            )
+                console.print(
+                    header_panel(
+                        field.name,
+                        f"[bold]{getattr(total_counts, field.name)}[/bold] results",
+                    )
+                )
+                console.print(
+                    pretty_dataclass_list(
+                        field_value.results,
+                        hidden_fields=[
+                            "id",
+                            "type",
+                            "images",
+                            "square_images",
+                            "score",
+                            "description",
+                            "date",
+                            "series_title",
+                            "season_id",
+                        ],
+                        field_formatters={
+                            "highlights": pretty_highlights,
+                        },
+                        field_widths={
+                            "highlights": 50,
+                        },
+                        field_order=[
+                            "id",
+                            "episode_id",
+                            "series_id",
+                            "title",
+                            "highlights",
+                        ],
+                    ),
+                )
 
 
 def main():

@@ -321,6 +321,13 @@ class PodcastUmbrella(Podcast):
             deserialize=lambda x: [SeasonEmbedded.from_dict(d) for d in x["seasons"]],
         ),
     )
+    episodes: list[Episode] = field(
+        default_factory=list,
+        metadata=field_options(
+            alias="_embedded",
+            deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
+        )
+    )
 
 
 @dataclass
