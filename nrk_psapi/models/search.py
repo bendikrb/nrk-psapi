@@ -115,10 +115,11 @@ class SeriesListItem(BaseDataClassORJSONMixin):
         SearchResultType.CUSTOM_SEASON,
     ]
     title: str
-    initial_character: str
+    initial_character: str = field(metadata=field_options(alias="initialCharacter"))
     images: list[Image]
-    series_id: str | None = None
-    season_id: str | None = None
+    square_images: list[Image] | None = field(default=None, metadata=field_options(alias="squareImages"))
+    series_id: str | None = field(default=None, metadata=field_options(alias="seriesId"))
+    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
 
 
 @dataclass
@@ -130,10 +131,10 @@ class LetterListItem(BaseDataClassORJSONMixin):
 
 @dataclass
 class CategoriesLinks(BaseDataClassORJSONMixin):
-    next_page: Link | None = None
-    prev_page: Link | None = None
-    next_letter: Link | None = None
-    prev_letter: Link | None = None
+    next_page: Link | None = field(default=None, metadata=field_options(alias="nextPage"))
+    prev_page: Link | None = field(default=None, metadata=field_options(alias="prevPage"))
+    next_letter: Link | None = field(default=None, metadata=field_options(alias="nextLetter"))
+    prev_letter: Link | None = field(default=None, metadata=field_options(alias="prevLetter"))
 
 
 @dataclass
@@ -142,7 +143,7 @@ class CategoriesResponse(BaseDataClassORJSONMixin):
     letters: list[LetterListItem]
     title: str
     series: list[SeriesListItem]
-    total_count: int
+    total_count: int = field(metadata=field_options(alias="totalCount"))
 
 
 @dataclass

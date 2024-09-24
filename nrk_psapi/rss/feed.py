@@ -30,14 +30,23 @@ if TYPE_CHECKING:
         Episode,
         PodcastSeries,
     )
+    from nrk_psapi.models.rss import EpisodeChapter
 
 
 @dataclass
 class NrkPodcastFeed:
+    """NrkPodcastFeed.
+
+    Args:
+        api: NrkPodcastAPI
+        base_url: str
+
+    """
+
     api: NrkPodcastAPI
     base_url: str
 
-    async def build_episode_chapters(self, episode: Episode) -> list[dict]:
+    async def build_episode_chapters(self, episode: Episode) -> list[EpisodeChapter]:
         return [
             {
                 "title": index_point.title,
@@ -46,7 +55,7 @@ class NrkPodcastFeed:
             for index_point in episode.index_points
         ]
 
-    async def build_episode_item(self, episode: Episode, series_data: PodcastSeries):
+    async def build_episode_item(self, episode: Episode, series_data: PodcastSeries) -> Item | None:
         _LOGGER.debug("Building episode item: %s", episode.episode_id)
         manifest = await self.api.get_playback_manifest(episode.episode_id, podcast=True)
         episode_file = manifest.playable.assets[0] or None

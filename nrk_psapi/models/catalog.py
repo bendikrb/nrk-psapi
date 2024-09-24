@@ -107,8 +107,19 @@ class Titles(BaseDataClassORJSONMixin):
 
 @dataclass
 class DefaultTitles(BaseDataClassORJSONMixin):
+    """Contains default title information.
+
+    Args:
+        main_title(str): The main title of the episode.
+        subtitle(str): The subtitle of the episode.
+
+    """
+
     main_title: str = field(metadata=field_options(alias="mainTitle"))
+    """str: The maaain title of the episode. """
+
     subtitle: str | None = field(default=None, metadata=field_options(alias="subtitle"))
+    """str: The suuubtitle of the episode. """
 
     def __str__(self):
         title = self.main_title
@@ -119,8 +130,13 @@ class DefaultTitles(BaseDataClassORJSONMixin):
 
 @dataclass
 class TemporalTitles(BaseDataClassORJSONMixin):
+    """Contains temporal title information."""
+
     titles: list[str]
+    """list[str]: The titles of the episode."""
+
     default_titles: DefaultTitles = field(metadata=field_options(alias="defaultTitles"))
+    """DefaultTitles: The default titles of the episode."""
 
     def __str__(self):
         if len(self.titles):
@@ -130,13 +146,38 @@ class TemporalTitles(BaseDataClassORJSONMixin):
 
 @dataclass
 class EpisodeContext(BaseDataClassORJSONMixin):
+    """Contains episode context information."""
+
     _links: Links
     type: PodcastType
 
 
 @dataclass
 class Episode(BaseDataClassORJSONMixin):
-    """Represents a podcast episode."""
+    """Represents a podcast episode.
+
+    Args:
+        id(str): The episode ID.
+        type(EpisodeType): The type of the episode.
+        episode_id(str): The episode ID.
+        titles(Titles): The titles of the episode.
+        duration(timedelta): The duration of the episode.
+        date(datetime): The date of the episode.
+        usage_rights(UsageRights): The usage rights of the episode.
+        availability(Availability): The availability of the episode.
+        program_information(ProgramInformation): The program information of the episode.
+        image(list[Image], optional): The images of the episode.
+        square_image(list[Image], optional): The square images of the episode.
+        category(Category, optional): The category of the episode.
+        badges(list, optional): The badges of the episode.
+        duration_in_seconds(int, optional): The duration of the episode in seconds.
+        clip_id(str, optional): The clip ID of the episode.
+        original_title(str, optional): The original title of the episode.
+        production_year(int, optional): The production year of the episode.
+        index_points(list[IndexPoint], optional): The index points of the episode.
+        contributors(list[Contributor], optional): The contributors of the episode.
+
+    """
 
     _links: Links
     id: str
@@ -260,6 +301,8 @@ class EpisodesResponse(BaseDataClassORJSONMixin):
 
 @dataclass
 class PodcastSeries(BaseDataClassORJSONMixin):
+    """Represents a podcast series."""
+
     id: str
     title: str = field(init=False)
     titles: Titles
@@ -294,6 +337,8 @@ class Podcast(BaseDataClassORJSONMixin):
 
 @dataclass
 class PodcastStandard(Podcast):
+    """Represents a standard podcast."""
+
     seriesType = SeriesType.STANDARD  # noqa: N815
     episodes: list[Episode] = field(
         default_factory=list,
@@ -313,6 +358,8 @@ class PodcastStandard(Podcast):
 
 @dataclass
 class PodcastUmbrella(Podcast):
+    """Represents an umbrella podcast."""
+
     seriesType = SeriesType.UMBRELLA  # noqa: N815
     seasons: list[SeasonEmbedded] = field(
         default_factory=list,
@@ -326,12 +373,14 @@ class PodcastUmbrella(Podcast):
         metadata=field_options(
             alias="_embedded",
             deserialize=lambda x: [Episode.from_dict(d) for d in x["episodes"]["_embedded"]["episodes"]],
-        )
+        ),
     )
 
 
 @dataclass
 class PodcastSequential(Podcast):
+    """Represents a sequential podcast."""
+
     seriesType = SeriesType.SEQUENTIAL  # noqa: N815
     seasons: list[SeasonEmbedded] = field(
         default_factory=list,
@@ -344,6 +393,8 @@ class PodcastSequential(Podcast):
 
 @dataclass
 class SeasonLink(BaseDataClassORJSONMixin):
+    """Represents a season link in the API response."""
+
     id: str
     title: str
 
@@ -516,12 +567,25 @@ class PlaylistItem(BaseDataClassORJSONMixin):
 
 @dataclass
 class PlaylistMusicItem(PlaylistItem):
+    """Represents a music playlist item in the playlist."""
+
     type = "Music"
 
 
 @dataclass
 class Series(BaseDataClassORJSONMixin):
-    """Represents a series object."""
+    """Represents a series object.
+
+    Args:
+        id (str): The ID of the series.
+        series_id (str): The ID of the series.
+        title (str): The title of the series.
+        type (PodcastType): The type of the series.
+        images (list[Image]): The images of the series.
+        square_images (list[Image]): The square images of the series.
+        season_id (str, optional): The ID of the season.
+
+    """
 
     _links: Links
     id: str
