@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import asyncio
 import contextlib
-import functools
+from functools import lru_cache, partial
+import os
 from typing import Callable
 
 import cloudpickle
@@ -41,7 +41,7 @@ class CloudpickleDisk(Disk):
         return data
 
 
-@functools.lru_cache(1)
+@lru_cache(1)
 def get_cache():
     """Get the context object that contains previously-computed return values."""
     cache_dir = os.environ.get("NRK_PSAPI_CACHE_DIR", None)
@@ -71,11 +71,29 @@ def cache(expire: float | None = DISK_CACHE_DURATION, typed=False, ignore=()):
                     return await cached_function(*args, **kwargs)
 
                 cache_key = wrapper.__cache_key__(*args, **kwargs)
-                result = wrapper.__memory__.get(cache_key, default=ENOVAL, retry=True)
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    partial(
+                        wrapper.__memory__.get,
+                        key=cache_key,
+                        default=ENOVAL,
+                        retry=True,
+                    ),
+                )
 
                 if result is ENOVAL:
                     result = await cached_function(*args, **kwargs)
-                    wrapper.__memory__.set(cache_key, result, expire, retry=True)
+                    await loop.run_in_executor(
+                        None,
+                        partial(
+                            wrapper.__memory__.set,
+                            key=cache_key,
+                            value=result,
+                            expire=expire,
+                            retry=True,
+                        ),
+                    )
 
                 return result
 

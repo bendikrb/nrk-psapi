@@ -5,16 +5,18 @@ from .caching import clear_cache, disable_cache, get_cache
 from .exceptions import NrkPsApiError
 from .models.catalog import Episode, Podcast, Series
 from .models.playback import Asset, Playable
+from .rss import NrkPodcastFeed
 
 __all__ = [
-    "NrkPodcastAPI",
-    "NrkPsApiError",
-    "Episode",
-    "Podcast",
-    "Series",
-    "Playable",
     "Asset",
     "clear_cache",
     "disable_cache",
+    "Episode",
     "get_cache",
+    "NrkPodcastAPI",
+    "NrkPodcastFeed",
+    "NrkPsApiError",
+    "Playable",
+    "Podcast",
+    "Series",
 ]
