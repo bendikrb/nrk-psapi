@@ -7,10 +7,8 @@ import asyncio
 from dataclasses import fields
 import logging
 import re
-from _io import TextIOWrapper
 from typing import TYPE_CHECKING, Callable
 
-from rich import print as rprint
 from rich.box import SIMPLE
 from rich.console import Console
 from rich.logging import RichHandler
@@ -20,6 +18,8 @@ from rich.table import Table
 from rich.text import Text
 
 from nrk_psapi import NrkPodcastAPI
+from nrk_psapi.caching import cache_disabled
+from nrk_psapi.exceptions import NrkPsApiNotFoundError
 from nrk_psapi.models.catalog import (
     PodcastSequential,
     PodcastStandard,
@@ -192,7 +192,7 @@ def header_panel(title: str, subtitle: str):
     )
     return Panel(
         grid,
-        style="white on dark_red",
+        style="white on black",
         box=SIMPLE,
     )
 
@@ -210,7 +210,7 @@ def highlight_context(
         return text[:max_length] + "..." if len(text) > max_length else text
 
     # Determine the context to include around each highlight
-    result = []
+    result: list[tuple] = []
     current_length = 0
     included_occurrences = 0
 
@@ -293,11 +293,12 @@ def csv_to_list(csv: str) -> list[str]:
     return [x.strip() for x in csv.split(",")]
 
 
-def main_parser() -> argparse.ArgumentParser:
+def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     """Create the ArgumentParser with all relevant subparsers."""
     parser = argparse.ArgumentParser(description="A simple executable to use and test the library.")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Logging verbosity level")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--clear-cache", action="store_true", help="Clear cache")
 
     subparsers = parser.add_subparsers(dest="cmd")
     subparsers.required = True
@@ -306,7 +307,10 @@ def main_parser() -> argparse.ArgumentParser:
     # Browse
     #
     browse_parser = subparsers.add_parser("browse", description="Browse podcast(s).")
-    browse_parser.add_argument("letter", type=single_letter, help="The letter to browse: A-Z,#")
+    browse_parser.add_argument(
+        "category", type=str, nargs="?", help="Filter by category (corresponds to the ones from 'pages')."
+    )
+    browse_parser.add_argument("--letter", type=single_letter, help="Filter by letter: A-Z,#")
     browse_parser.set_defaults(func=browse)
     _add_paging_arguments(browse_parser)
 
@@ -324,6 +328,7 @@ def main_parser() -> argparse.ArgumentParser:
     podcast_parser.add_argument("podcast_id", type=str, nargs="?", help="Podcast id.")
     podcast_parser.add_argument("season_id", type=str, nargs="?", help="Season id.")
     podcast_parser.add_argument("--episodes", action="store_true", help="Get episodes.")
+    _add_paging_arguments(podcast_parser)
     podcast_parser.set_defaults(func=get_podcasts)
 
     #
@@ -333,6 +338,7 @@ def main_parser() -> argparse.ArgumentParser:
     series_parser.add_argument("series_id", type=str, nargs="?", help="Series id.")
     series_parser.add_argument("season_id", type=str, nargs="?", help="Season id.")
     series_parser.add_argument("--episodes", action="store_true", help="Get episodes.")
+    _add_paging_arguments(series_parser)
     series_parser.set_defaults(func=get_series)
 
     #
@@ -416,8 +422,44 @@ def _add_paging_arguments(parser: argparse.ArgumentParser) -> None:
 async def browse(args):
     """Browse podcast(s)."""
     async with NrkPodcastAPI() as client:
-        results = await client.browse(args.letter, per_page=args.limit, page=args.page)
-        rprint(results)
+        results = await client.browse(
+            category=args.category,
+            letter=args.letter,
+            per_page=args.limit,
+            page=args.page,
+        )
+
+        cmd_letter = f" --letter {args.letter}" if args.letter else ""
+        title_letter = f" (starting with [bold]{args.letter}[/bold])" if args.letter else ""
+
+        console.print(header_panel(f"{results.title}{title_letter}", f"{results.total_count} results"))
+        console.print(
+            pretty_dataclass_list(
+                results.series,
+                visible_fields=[
+                    "id",
+                    "series_id",
+                    "type",
+                    "title",
+                ],
+                field_order=["id", "series_id", "type", "title"],
+            ),
+        )
+        if results.total_count > args.limit * args.page:
+            console.print(
+                "[cyan]> Next page[/cyan]\n"
+                f"$ nrk browse {args.category or ""}{cmd_letter} --limit {args.limit} --page {args.page + 1}\n"
+            )
+        if results.total_count > 0 and not args.letter:
+            console.print(
+                "[cyan]> Only get results starting with A[/cyan]\n"
+                f"$ nrk browse {args.category or ""} [bold blue]--letter A[/bold blue]\n"
+            )
+        if results.total_count > 0 and not args.category:
+            console.print(
+                "[cyan]> Filter by category[/cyan]\n"
+                f"$ nrk browse [bold blue]kultur[/bold blue]{cmd_letter}"
+            )
 
 
 async def get_channel(args):
@@ -523,6 +565,19 @@ async def get_podcast(args):
             if args.episodes:
                 console.rule("Episodes")
                 await get_podcast_episodes(args)
+            else:
+                console.print(
+                    Syntax(
+                        f"$ nrk podcast {podcast.series.id} {podcast.seasons[0].id} --episodes",
+                        lexer="bash",
+                    )
+                )
+                console.print(
+                    Syntax(
+                        f"$ nrk podcast {podcast.series.id} --episodes --limit 50 --page 1",
+                        lexer="bash",
+                    )
+                )
 
 
 async def get_podcast_season(args):
@@ -546,9 +601,19 @@ async def get_podcast_episodes(args, series=False):
     """Get podcast episodes."""
     async with NrkPodcastAPI() as client:
         if series:
-            episodes = await client.get_series_episodes(args.series_id, args.season_id)
+            episodes = await client.get_series_episodes(
+                args.series_id,
+                args.season_id,
+                page_size=args.limit,
+                page=args.page,
+            )
         else:
-            episodes = await client.get_podcast_episodes(args.podcast_id, args.season_id)
+            episodes = await client.get_podcast_episodes(
+                args.podcast_id,
+                args.season_id,
+                page_size=args.limit,
+                page=args.page,
+            )
 
         console.print(
             pretty_dataclass_list(
@@ -582,50 +647,53 @@ async def get_series(args):
     if args.series_id and args.season_id:
         await get_series_season(args.series_id, args.season_id)
     elif args.series_id:
-        async with NrkPodcastAPI() as client:
-            podcast = await client.get_series(args.series_id)
-            console.print(
-                *[
-                    pretty_dataclass(
-                        podcast,
-                        title="Podcast",
-                        visible_fields=[
-                            "type",
-                            "series_type",
-                            "season_display_type",
-                            "titles",
-                        ],
-                    ),
-                    pretty_dataclass(
-                        podcast.series,
-                        title="Series",
-                        visible_fields=["id", "title", "category"],
-                    ),
-                ]
-            )
+        try:
+            async with NrkPodcastAPI() as client:
+                podcast = await client.get_series(args.series_id)
+                console.print(
+                    *[
+                        pretty_dataclass(
+                            podcast,
+                            title="Podcast",
+                            visible_fields=[
+                                "type",
+                                "series_type",
+                                "season_display_type",
+                                "titles",
+                            ],
+                        ),
+                        pretty_dataclass(
+                            podcast.series,
+                            title="Series",
+                            visible_fields=["id", "title", "category"],
+                        ),
+                    ]
+                )
 
-            console.rule("Seasons")
-            if isinstance(podcast, PodcastStandard):
-                console.print(
-                    pretty_dataclass_list(
-                        podcast.seasons,
-                        visible_fields=[
-                            "id",
-                            "title",
-                        ],
-                    ),
-                )
-            elif isinstance(podcast, (PodcastSequential, PodcastUmbrella)):
-                console.print(
-                    pretty_dataclass_list(
-                        podcast.seasons,
-                        visible_fields=[
-                            "id",
-                            "titles",
-                            "episode_count",
-                        ],
-                    ),
-                )
+                console.rule("Seasons")
+                if isinstance(podcast, PodcastStandard):
+                    console.print(
+                        pretty_dataclass_list(
+                            podcast.seasons,
+                            visible_fields=[
+                                "id",
+                                "title",
+                            ],
+                        ),
+                    )
+                elif isinstance(podcast, (PodcastSequential, PodcastUmbrella)):
+                    console.print(
+                        pretty_dataclass_list(
+                            podcast.seasons,
+                            visible_fields=[
+                                "id",
+                                "titles",
+                                "episode_count",
+                            ],
+                        ),
+                    )
+        except NrkPsApiNotFoundError:
+            console.print(f"Series [bold]{args.series_id}[/bold] not found")
     if args.episodes and args.series_id:
         console.rule("Episodes")
         await get_podcast_episodes(args, series=True)
@@ -674,7 +742,7 @@ async def get_recommendations(args):
 async def get_rss_feed(args):
     """Get RSS feed."""
 
-    output_file: TextIOWrapper = args.output_path
+    output_file = args.output_path
     async with NrkPodcastAPI() as client:
         rss = NrkPodcastFeed(client, args.base_url)
         feed = await rss.build_podcast_rss(args.podcast_id, args.limit)
@@ -916,7 +984,11 @@ def main():
         handlers=[RichHandler(console=console)],
     )
 
-    asyncio.run(args.func(args))
+    if args.clear_cache:
+        with cache_disabled():
+            asyncio.run(args.func(args))
+    else:
+        asyncio.run(args.func(args))
 
 
 if __name__ == "__main__":
