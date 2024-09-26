@@ -39,7 +39,7 @@ platformdirs = "^4.3.6"
 [tool.poetry.group.dev.dependencies]
 aresponses = "^3.0.0"
 covdefaults = "2.3.0"
-pre-commit = "^2.13.0"
+pre-commit = ">=2.13,<4.0"
 pylint = "3.2.7"
 pytest = "^8.3.3"
 pytest-asyncio = "*"
