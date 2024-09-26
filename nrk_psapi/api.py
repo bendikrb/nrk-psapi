@@ -82,7 +82,7 @@ class NrkPodcastAPI:
     def __post_init__(self):
         if not self.enable_cache:
             disable_cache()
-            _LOGGER.debug("Cache disabled")
+            _LOGGER.warning("Cache disabled")
 
     @property
     def request_header(self) -> dict[str, str]:
@@ -97,7 +97,7 @@ class NrkPodcastAPI:
         uri: str,
         method: str = METH_GET,
         items_key: str | None = None,
-        page_size: int = 50,
+        page_size: int | None = None,
         **kwargs,
     ) -> list:
         """Make a paged request."""
@@ -121,11 +121,15 @@ class NrkPodcastAPI:
         self,
         uri: str,
         method: str = METH_GET,
-        page_size: int = 50,
-        page: int = 1,
+        page_size: int | None = None,
+        page: int | None = None,
         **kwargs,
     ):
         """Make a paged request."""
+        if page_size is None:
+            page_size = 50
+        if page is None:
+            page = 1
         return await self._request(uri, method, params={"pageSize": page_size, "page": page}, **kwargs)
 
     async def _request(
@@ -172,10 +176,12 @@ class NrkPodcastAPI:
             ClientResponseError,
             socket.gaierror,
         ) as exception:
-            if exception.status == HTTPStatus.TOO_MANY_REQUESTS:
+            if hasattr(exception, "status") and exception.status == HTTPStatus.TOO_MANY_REQUESTS:
                 raise NrkPsApiRateLimitError("Too many requests to NRK API. Try again later.") from exception
-            if exception.status == HTTPStatus.NOT_FOUND:
+            if hasattr(exception, "status") and exception.status == HTTPStatus.NOT_FOUND:
                 raise NrkPsApiNotFoundError("Resource not found") from exception
+            if hasattr(exception, "status") and exception.status == HTTPStatus.BAD_REQUEST:
+                raise NrkPsApiError("Bad request syntax or unsupported method") from exception
             msg = f"Error occurred while communicating with NRK API: {exception}"
             raise NrkPsApiConnectionError(msg) from exception
 
@@ -211,9 +217,6 @@ class NrkPodcastAPI:
             program(bool, optional): Media is a program. Defaults to False.
             podcast(bool, optional): Media is a podcast. Defaults to False.
 
-        Returns:
-            PodcastManifest
-
         """
         if podcast:
             endpoint = "/podcast"
@@ -243,9 +246,6 @@ class NrkPodcastAPI:
             program(bool, optional): Media is a program. Defaults to False.
             podcast(bool, optional): Media is a podcast. Defaults to False.
 
-        Returns:
-            PodcastMetadata
-
         """
         if podcast:
             endpoint = "/podcast"
@@ -266,9 +266,6 @@ class NrkPodcastAPI:
             podcast_id(str): Podcast ID.
             episode_id(str): Episode ID.
 
-        Returns:
-            Episode
-
         """
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/episodes/{episode_id}")
         return Episode.from_dict(result)
@@ -279,9 +276,6 @@ class NrkPodcastAPI:
 
         Args:
             series_id(str): Series ID.
-
-        Returns:
-            SeriesType
 
         """
         result = await self._request(f"radio/catalog/series/{series_id}/type")
@@ -294,9 +288,6 @@ class NrkPodcastAPI:
         Args:
             podcast_id(str): Podcast ID.
 
-        Returns:
-            SeriesType
-
         """
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/type")
         return SeriesType.from_str(result["seriesType"])
@@ -308,9 +299,6 @@ class NrkPodcastAPI:
         Args:
             series_id(str): Series ID.
             season_id(str): Season ID.
-
-        Returns:
-            Season
 
         """
         result = await self._request(f"radio/catalog/series/{series_id}/seasons/{season_id}")
@@ -330,11 +318,8 @@ class NrkPodcastAPI:
         Args:
             series_id(str): Series ID.
             season_id(str, optional): Season ID.
-            page_size(int, optional): Number of episodes to return (defaults to all)
-            page(int, optional): Page number
-
-        Returns:
-            list[Episode]
+            page_size(int, optional): Number of episodes to return per page (defaults to 50)
+            page(int, optional): Page number, set to -1 for all (defaults to 1)
 
         """
         if season_id is not None:
@@ -342,18 +327,20 @@ class NrkPodcastAPI:
         else:
             uri = f"radio/catalog/series/{series_id}/episodes"
 
-        if page_size is not None:
+        if page == -1:
+            result = await self._request_paged_all(
+                uri,
+                page_size=page_size,
+                items_key="_embedded.episodes",
+            )
+        else:
             results = await self._request_paged(
                 uri,
                 page_size=page_size,
                 page=page,
             )
             result = results.get("_embedded", {}).get("episodes", [])
-        else:
-            result = await self._request_paged_all(
-                uri,
-                items_key="_embedded.episodes",
-            )
+
         return [Episode.from_dict(e) for e in result]
 
     @cache(ignore=(0,))
@@ -362,9 +349,6 @@ class NrkPodcastAPI:
 
         Args:
             channel_id(str): Channel ID.
-
-        Returns:
-            Channel
 
         """
         result = await self._request(f"radio/channels/livebuffer/{channel_id}")
@@ -377,9 +361,6 @@ class NrkPodcastAPI:
         Args:
             program_id(str): Program ID.
 
-        Returns:
-            Program
-
         """
         result = await self._request(f"radio/catalog/programs/{program_id}")
         return Program.from_dict(result)
@@ -390,9 +371,6 @@ class NrkPodcastAPI:
 
         Args:
             podcast_id(str): Podcast ID.
-
-        Returns:
-            Podcast
 
         """
         result = await self._request(f"radio/catalog/podcast/{podcast_id}")
@@ -405,9 +383,6 @@ class NrkPodcastAPI:
         Args:
             podcast_ids(list[str]): List of podcast ids.
 
-        Returns:
-            list[Podcast]
-
         """
         results = await asyncio.gather(*[self.get_podcast(podcast_id) for podcast_id in podcast_ids])
         return list(results)
@@ -419,9 +394,6 @@ class NrkPodcastAPI:
         Args:
             podcast_id(str): Podcast ID
             season_id(str): Season ID
-
-        Returns:
-            Season
 
         """
         result = await self._request(f"radio/catalog/podcast/{podcast_id}/seasons/{season_id}")
@@ -441,11 +413,8 @@ class NrkPodcastAPI:
         Args:
             podcast_id(str): Podcast ID
             season_id(str, optional): Season ID
-            page_size(int, optional): Number of episodes to return (defaults to all)
-            page(int, optional): Page number
-
-        Returns:
-            list[Episode]
+            page_size(int, optional): Number of episodes to return per page (defaults to 50)
+            page(int, optional): Page number, set to -1 for all (defaults to 1)
 
         """
         if season_id is not None:
@@ -453,28 +422,25 @@ class NrkPodcastAPI:
         else:
             uri = f"radio/catalog/podcast/{podcast_id}/episodes"
 
-        if page_size is not None:
+        if page == -1:
+            result = await self._request_paged_all(
+                uri,
+                page_size=page_size,
+                items_key="_embedded.episodes",
+            )
+        else:
             results = await self._request_paged(
                 uri,
                 page_size=page_size,
                 page=page,
             )
             result = results.get("_embedded", {}).get("episodes", [])
-        else:
-            result = await self._request_paged_all(
-                uri,
-                items_key="_embedded.episodes",
-            )
+
         return [Episode.from_dict(e) for e in result]
 
     @cache(ignore=(0,))
     async def get_all_podcasts(self) -> list[SeriesListItem]:
-        """Get all podcasts.
-
-        Returns:
-            list[Series]
-
-        """
+        """Get all podcasts."""
         result = await self._request(
             "radio/search/categories/podcast",
             params={
@@ -489,9 +455,6 @@ class NrkPodcastAPI:
 
         Args:
             series_id(str): Series ID.
-
-        Returns:
-            Podcast
 
         """
         result = await self._request(f"radio/catalog/series/{series_id}")
@@ -511,9 +474,6 @@ class NrkPodcastAPI:
             context_id(RecommendationContext, optional): Which context (front page, series page, etc.) the user is in.
             limit(int, optional): Number of recommendations returned (max 25). Defaults to 12.
 
-        Returns:
-            Recommendation
-
         """
 
         result = await self._request(
@@ -528,7 +488,7 @@ class NrkPodcastAPI:
     @cache(ignore=(0,))
     async def browse(
         self,
-        letter: SingleLetter | None = None,
+        letter: SingleLetter | str | None = None,
         category: str | None = None,
         per_page: int = 50,
         page: int = 1,
@@ -556,7 +516,6 @@ class NrkPodcastAPI:
                 "letter": letter,
                 "take": per_page,
                 "skip": (page - 1) * per_page,
-                "page": page,
             },
         )
         return CategoriesResponse.from_dict(result)
@@ -575,9 +534,6 @@ class NrkPodcastAPI:
             per_page(int, optional): Number of items per page. Defaults to 50.
             page(int, optional): Page number. Defaults to 1.
             search_type(SearchResultType, optional): Search type, one of :class:`~SearchResultType`. Defaults to all.
-
-        Returns:
-            SearchResponse
 
         """
         result = await self._request(
@@ -598,20 +554,12 @@ class NrkPodcastAPI:
         Args:
             query(str): Search query
 
-        Returns:
-            list[str]: A list of suggestions.
-
         """
         return await self._request("/radio/search/search/suggest", params={"q": query})
 
     @cache(ignore=(0,))
     async def radio_pages(self) -> Pages:
-        """Get radio pages.
-
-        Returns:
-            Pages
-
-        """
+        """Get radio pages."""
         result = await self._request("radio/pages")
         return Pages.from_dict(result)
 
@@ -622,9 +570,6 @@ class NrkPodcastAPI:
         Args:
             page_id(str): Name of the page, e.g. 'discover'.
             section_id(str, optional): Web friendly title of the section, e.g. 'krim-fra-virkeligheten'.
-
-        Returns:
-            Page
 
         """
         result = await self._request(f"radio/pages/{page_id}")
@@ -642,9 +587,6 @@ class NrkPodcastAPI:
         """Get curated podcasts.
         This is a wrapper around :meth:`radio_page`, with the section_id set to "podcast" and
         some logic to make it easier to use for accessing curated podcasts.
-
-        Returns:
-            Curated
 
         """
         page = await self.radio_page(page_id="podcast")
@@ -673,7 +615,7 @@ class NrkPodcastAPI:
         return Curated(sections=sections)
 
     @cache(ignore=(0,))
-    async def fetch_file_info(self, url: URL | str):
+    async def fetch_file_info(self, url: URL | str) -> tuple[int, str]:
         """Proxies call to `utils.fetch_file_info`, passing on self.session.
 
         Args:
