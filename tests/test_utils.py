@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from aiohttp import ClientSession
 from aresponses import ResponsesMockServer
 from yarl import URL
@@ -10,7 +9,6 @@ from yarl import URL
 from nrk_psapi.utils import fetch_file_info
 
 
-@pytest.mark.asyncio
 async def test_fetch_file_info(aresponses: ResponsesMockServer):
     url = "http://example.com/file"
     expected_content_length = "1234"
@@ -35,7 +33,6 @@ async def test_fetch_file_info(aresponses: ResponsesMockServer):
     assert content_type == expected_content_type
 
 
-@pytest.mark.asyncio
 async def test_fetch_file_info_no_session(aresponses: ResponsesMockServer):
     url = "http://example.com/file"
     expected_content_length = "5678"

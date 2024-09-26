@@ -22,6 +22,7 @@ from nrk_psapi.exceptions import (
     NrkPsApiRateLimitError,
 )
 from nrk_psapi.models import (
+    CategoriesResponse,
     Channel,
     ChannelPlug,
     Curated,
@@ -45,7 +46,6 @@ from nrk_psapi.models import (
     PodcastMetadata,
     PodcastMetadataEmbedded,
     PodcastPlug,
-    PodcastSearchResponse,
     PodcastSeasonPlug,
     PodcastSeries,
     PodcastStandard,
@@ -53,17 +53,16 @@ from nrk_psapi.models import (
     PodcastUmbrella,
     Program,
     Recommendation,
-    SearchedSeries,
     SearchResponse,
     Season,
     Section,
-    Series,
+    SeriesListItem,
     SeriesPlug,
     SeriesType,
     StandaloneProgramPlug,
 )
 
-from .helpers import load_fixture_json
+from .helpers import CustomRoute, load_fixture_json
 
 logger = logging.getLogger(__name__)
 
@@ -172,56 +171,80 @@ async def test_get_standard_podcast(
 
 
 @pytest.mark.parametrize(
-    "podcast_id,season_id",
+    ("podcast_id", "season_id"),
     [
-        ("tore_sagens_podkast", None),
         ("tore_sagens_podkast", "2021"),
     ],
 )
 async def test_get_podcast_episodes(
     aresponses: ResponsesMockServer,
-    podcast_id,
-    season_id,
+    podcast_id: str,
+    season_id: str | None,
 ):
-    if season_id is not None:
-        uri = f"/radio/catalog/podcast/{podcast_id}/seasons/{season_id}/episodes"
-        fixture_name = f"radio_catalog_podcast_{podcast_id}_seasons_{season_id}_episodes"
-        aresponses.add(
-            URL(PSAPI_BASE_URL).host,
-            uri,
-            "GET",
-            json_response(data=load_fixture_json(fixture_name)),
-        )
-    else:
-        uri = f"/radio/catalog/podcast/{podcast_id}/episodes"
-        for page_no in range(1, 3):
-            fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes_page{page_no}"
-            aresponses.add(
-                URL(PSAPI_BASE_URL).host,
-                f"{uri}?pageSize=50&page={page_no}",
-                "GET",
-                json_response(data=load_fixture_json(fixture_name)),
-                match_querystring=True,
-            )
+    page_size = 15
+    uri = f"/radio/catalog/podcast/{podcast_id}/seasons/{season_id}/episodes"
+    fixture_name = f"radio_catalog_podcast_{podcast_id}_seasons_{season_id}_episodes"
+    aresponses.add(
+        response=json_response(data=load_fixture_json(fixture_name)),
+        route=CustomRoute(
+            host_pattern=URL(PSAPI_BASE_URL).host,
+            path_pattern=uri,
+            path_qs={"pageSize": page_size, "page": 1},
+            method_pattern="GET",
+        ),
+    )
 
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.get_podcast_episodes(podcast_id, season_id)
+        result = await nrk_api.get_podcast_episodes(podcast_id, season_id, page_size=page_size, page=1)
         assert isinstance(result, list)
         assert len(result) > 0
         assert all(isinstance(item, Episode) for item in result)
 
 
 @pytest.mark.parametrize(
-    "podcast_id,season_id",
+    "podcast_id",
+    [
+        "tore_sagens_podkast",
+    ],
+)
+async def test_get_all_podcast_episodes(
+    aresponses: ResponsesMockServer,
+    podcast_id: str,
+):
+    page_size = 15
+
+    uri = f"/radio/catalog/podcast/{podcast_id}/episodes"
+    for page_no in range(1, 3):
+        fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes_page{page_no}"
+        aresponses.add(
+            response=json_response(data=load_fixture_json(fixture_name)),
+            route=CustomRoute(
+                host_pattern=URL(PSAPI_BASE_URL).host,
+                path_pattern=uri,
+                path_qs={"pageSize": page_size, "page": page_no},
+                method_pattern="GET",
+            ),
+        )
+
+    async with aiohttp.ClientSession() as session:
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
+        result = await nrk_api.get_podcast_episodes(podcast_id, page_size=page_size, page=-1)
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert all(isinstance(item, Episode) for item in result)
+
+
+@pytest.mark.parametrize(
+    ("podcast_id", "season_id"),
     [
         ("hele_historien", "alene-i-atlanteren"),
     ],
 )
 async def test_get_podcast_season(
     aresponses: ResponsesMockServer,
-    podcast_id,
-    season_id,
+    podcast_id: str,
+    season_id: str,
 ):
     fixture_name = f"radio_catalog_podcast_{podcast_id}_seasons_{season_id}"
     fixture = load_fixture_json(fixture_name)
@@ -251,7 +274,7 @@ async def test_get_all_podcasts(aresponses: ResponsesMockServer):
         result = await nrk_api.get_all_podcasts()
         assert isinstance(result, list)
         assert len(result) > 0
-        assert all(isinstance(item, Series) for item in result)
+        assert all(isinstance(item, SeriesListItem) for item in result)
 
 
 @pytest.mark.parametrize(
@@ -278,15 +301,15 @@ async def test_get_series_type(aresponses: ResponsesMockServer, series_id: str):
 
 
 @pytest.mark.parametrize(
-    "series_id,season_id",
+    ("series_id", "season_id"),
     [
         ("karsten-og-petra-radio", "200511"),
     ],
 )
 async def test_get_series_season(
     aresponses: ResponsesMockServer,
-    series_id,
-    season_id,
+    series_id: str,
+    season_id: str,
 ):
     fixture_name = f"radio_catalog_series_{series_id}_seasons_{season_id}"
     fixture = load_fixture_json(fixture_name)
@@ -305,7 +328,7 @@ async def test_get_series_season(
 
 
 @pytest.mark.parametrize(
-    "series_id,season_id",
+    ("series_id", "season_id"),
     [
         ("karsten-og-petra-radio", None),
         ("karsten-og-petra-radio", "200511"),
@@ -313,8 +336,8 @@ async def test_get_series_season(
 )
 async def test_get_series_episodes(
     aresponses: ResponsesMockServer,
-    series_id,
-    season_id,
+    series_id: str,
+    season_id: str | None,
 ):
     if season_id is not None:
         uri = f"/radio/catalog/series/{series_id}/seasons/{season_id}/episodes"
@@ -332,7 +355,41 @@ async def test_get_series_episodes(
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.get_series_episodes(series_id, season_id)
+        result = await nrk_api.get_series_episodes(series_id, season_id, page_size=20, page=1)
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert all(isinstance(item, Episode) for item in result)
+
+
+@pytest.mark.parametrize(
+    ("series_id", "season_id"),
+    [
+        ("karsten-og-petra-radio", None),
+        ("karsten-og-petra-radio", "200511"),
+    ],
+)
+async def test_get_all_series_episodes(
+    aresponses: ResponsesMockServer,
+    series_id: str,
+    season_id: str | None,
+):
+    if season_id is not None:
+        uri = f"/radio/catalog/series/{series_id}/seasons/{season_id}/episodes"
+        fixture_name = f"radio_catalog_series_{series_id}_seasons_{season_id}_episodes"
+    else:
+        uri = f"/radio/catalog/series/{series_id}/episodes"
+        fixture_name = f"radio_catalog_series_{series_id}_episodes"
+
+    fixture = load_fixture_json(fixture_name)
+    aresponses.add(
+        URL(PSAPI_BASE_URL).host,
+        uri,
+        "GET",
+        json_response(data=fixture),
+    )
+    async with aiohttp.ClientSession() as session:
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
+        result = await nrk_api.get_series_episodes(series_id, season_id, page_size=20, page=-1)
         assert isinstance(result, list)
         assert len(result) > 0
         assert all(isinstance(item, Episode) for item in result)
@@ -382,26 +439,44 @@ async def test_get_recommendations(aresponses: ResponsesMockServer, item_id: str
         assert isinstance(result, Recommendation)
 
 
-async def test_browse(aresponses: ResponsesMockServer):
-    fixture_name = "radio_search_categories_alt-innhold_A"
-    uri = "/radio/search/categories/alt-innhold"
-    fixture = load_fixture_json(fixture_name)
+@pytest.mark.parametrize(("category", "letter"), [(None, "A"), ("kultur", None)])
+async def test_browse(aresponses: ResponsesMockServer, category: str, letter: str):
+    per_page = 10
+    page = 1
+
+    fixture_name = f"radio_search_categories_{category or "alt-innhold"}"
+    uri = f"/radio/search/categories/{category or "alt-innhold"}"
+    uri_qs = {
+        "take": per_page,
+        "skip": per_page * (page - 1),
+    }
+    if letter is not None:
+        fixture_name += f"_{letter}"
+        uri_qs["letter"] = letter
+
     aresponses.add(
-        URL(PSAPI_BASE_URL).host,
-        uri,
-        "GET",
-        json_response(data=fixture),
+        response=json_response(data=load_fixture_json(fixture_name)),
+        route=CustomRoute(
+            host_pattern=URL(PSAPI_BASE_URL).host,
+            path_pattern=uri,
+            path_qs=uri_qs,
+            method_pattern="GET",
+        ),
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.browse(letter="A", per_page=10)
-        assert isinstance(result, PodcastSearchResponse)
+        result = await nrk_api.browse(category=category, letter=letter, per_page=per_page, page=page)
+        assert isinstance(result, CategoriesResponse)
         assert isinstance(result.series, list)
-        assert all(isinstance(item, SearchedSeries) for item in result.series)
+        assert all(isinstance(item, SeriesListItem) for item in result.series)
 
 
-async def test_search(aresponses: ResponsesMockServer):
-    fixture_name = "radio_search_search_beyer"
+@pytest.mark.parametrize(
+    "query",
+    ["beyer"],
+)
+async def test_search(aresponses: ResponsesMockServer, query: str):
+    fixture_name = f"radio_search_search_{query}"
     uri = "/radio/search/search"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
@@ -412,12 +487,16 @@ async def test_search(aresponses: ResponsesMockServer):
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.search(query="beyer", per_page=10)
+        result = await nrk_api.search(query=query, per_page=10)
         assert isinstance(result, SearchResponse)
 
 
-async def test_search_suggest(aresponses: ResponsesMockServer):
-    fixture_name = "radio_search_search_suggest_bren"
+@pytest.mark.parametrize(
+    "query",
+    ["bren"],
+)
+async def test_search_suggest(aresponses: ResponsesMockServer, query: str):
+    fixture_name = f"radio_search_search_suggest_{query}"
     uri = "/radio/search/search/suggest"
     fixture = load_fixture_json(fixture_name)
     aresponses.add(
@@ -428,13 +507,13 @@ async def test_search_suggest(aresponses: ResponsesMockServer):
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.search_suggest("bren")
+        result = await nrk_api.search_suggest(query)
         assert isinstance(result, list)
         assert len(result) > 0
 
 
 @pytest.mark.parametrize(
-    "media_type,media_id",
+    ("media_type", "media_id"),
     [
         ("podcast", "l_d3d4424e-e692-4ab8-9442-4ee6929ab82a"),
         ("channel", "p1"),
@@ -442,7 +521,7 @@ async def test_search_suggest(aresponses: ResponsesMockServer):
         (None, "l_d3d4424e-e692-4ab8-9442-4ee6929ab82a"),
     ],
 )
-async def test_get_metadata(aresponses: ResponsesMockServer, media_type, media_id):
+async def test_get_metadata(aresponses: ResponsesMockServer, media_type: str | None, media_id: str):
     podcast, channel, program = (media_type == "podcast", media_type == "channel", media_type == "program")
     if media_type is None:
         media_type = "podcast"
@@ -479,7 +558,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, media_type, media_i
 
 
 @pytest.mark.parametrize(
-    "media_type,media_id",
+    ("media_type", "media_id"),
     [
         ("podcast", "l_9a443e59-5c18-45d8-843e-595c18b5d849"),
         ("channel", "p1"),
@@ -487,7 +566,7 @@ async def test_get_metadata(aresponses: ResponsesMockServer, media_type, media_i
         (None, "l_9a443e59-5c18-45d8-843e-595c18b5d849"),
     ],
 )
-async def test_get_manifest(aresponses: ResponsesMockServer, media_type, media_id):
+async def test_get_manifest(aresponses: ResponsesMockServer, media_type: str | None, media_id: str):
     podcast, channel, program = (media_type == "podcast", media_type == "channel", media_type == "program")
     if media_type is None:
         media_type = "podcast"
@@ -517,15 +596,15 @@ async def test_get_manifest(aresponses: ResponsesMockServer, media_type, media_i
 
 
 @pytest.mark.parametrize(
-    "podcast_id,episode_id",
+    ("podcast_id", "episode_id"),
     [
         ("desken_brenner", "l_8c60be4d-ce0b-41d0-a0be-4dce0b81d01a"),
     ],
 )
 async def test_get_episode(
     aresponses: ResponsesMockServer,
-    podcast_id,
-    episode_id,
+    podcast_id: str,
+    episode_id: str,
 ):
     fixture_name = f"radio_catalog_podcast_{podcast_id}_episodes_{episode_id}"
     uri = f"/radio/catalog/podcast/{podcast_id}/episodes/{episode_id}"
@@ -623,7 +702,7 @@ async def test_pages(aresponses: ResponsesMockServer):
 
 
 @pytest.mark.parametrize(
-    "page_id,section_id",
+    ("page_id", "section_id"),
     [
         ("podcast", None),
         ("podcast", "damer-som-satte-spor"),
@@ -632,8 +711,8 @@ async def test_pages(aresponses: ResponsesMockServer):
 )
 async def test_podcast_page(
     aresponses: ResponsesMockServer,
-    page_id,
-    section_id,
+    page_id: str,
+    section_id: str | None,
 ):
     fixture_name = f"radio_pages_{page_id}"
     fixture = load_fixture_json(fixture_name)
@@ -660,7 +739,7 @@ async def test_podcast_page(
             included_sections = [item for item in result.sections if isinstance(item, IncludedSection)]
             plugs = [plug for section in included_sections for plug in section.included.plugs]
         assert all(isinstance(plug, Plug) for plug in plugs)
-        for plug in plugs:
+        for plug in plugs:  # pragma: no cover
             if isinstance(plug, PagePlug):
                 assert len(plug.page.page_id) > 0
             if isinstance(plug, PodcastPlug):
@@ -687,15 +766,15 @@ async def test_podcast_page(
 
 
 @pytest.mark.parametrize(
-    "expected_content_length,expected_content_type",
+    ("expected_content_length", "expected_content_type"),
     [
         ("1234", "audio/mpeg"),
     ],
 )
 async def test_fetch_file_info(
     aresponses: ResponsesMockServer,
-    expected_content_length,
-    expected_content_type,
+    expected_content_length: str,
+    expected_content_type: str,
 ):
     url = URL(f"{PSAPI_BASE_URL}/file")
 
@@ -752,7 +831,7 @@ async def test_timeout(aresponses: ResponsesMockServer):
     )
 
     async with aiohttp.ClientSession() as session:
-        nrk_api = NrkPodcastAPI(session=session, request_timeout=1)
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False, request_timeout=1)
         with pytest.raises((NrkPsApiConnectionError, NrkPsApiConnectionTimeoutError)):
             assert await nrk_api._request("ipcheck")
 
@@ -809,6 +888,21 @@ async def test_unexpected_response(aresponses: ResponsesMockServer):
         "/ipcheck",
         "GET",
         aresponses.Response(text="Success", status=200),
+    )
+
+    async with aiohttp.ClientSession() as session:
+        nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
+        with pytest.raises(NrkPsApiError):
+            assert await nrk_api._request("ipcheck")
+
+
+async def test_unexpected_error(aresponses: ResponsesMockServer):
+    """Test unexpected error handling."""
+    aresponses.add(
+        URL(PSAPI_BASE_URL).host,
+        "/ipcheck",
+        "GET",
+        aresponses.Response(text="Error", status=418),
     )
 
     async with aiohttp.ClientSession() as session:

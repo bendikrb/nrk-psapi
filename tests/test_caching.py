@@ -11,7 +11,7 @@ async def test_get_cache(test_cache):
     memory = nrk_psapi.get_cache()
     assert isinstance(memory, diskcache.Cache)
 
-    store = list()
+    store = []
 
     @test_cache
     def f(x):
@@ -32,7 +32,7 @@ async def test_clear_cache(test_cache):
     """Make sure that we can clear the cache."""
     import nrk_psapi
 
-    store = list()
+    store = []
 
     @test_cache
     def f(x):
@@ -55,7 +55,7 @@ async def test_disable_cache(test_cache):
 
     nrk_psapi.disable_cache()
 
-    store = list()
+    store = []
 
     @test_cache
     def f(x):
@@ -69,7 +69,7 @@ async def test_disable_cache(test_cache):
 
 
 async def test_cache_disabled_decorator(test_cache):
-    """Ensure cache can be disabled in a local scope"""
+    """Ensure cache can be disabled in a local scope."""
 
     from nrk_psapi.caching import cache_disabled
 

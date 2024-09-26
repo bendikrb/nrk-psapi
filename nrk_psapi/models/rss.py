@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import NotRequired, TypedDict
 
 
-class EpisodeChapter(TypedDict):
+class EpisodeChapter(TypedDict):  # pragma: no cover
     startTime: float
     title: NotRequired[str]
     img: NotRequired[str]

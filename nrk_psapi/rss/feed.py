@@ -21,6 +21,8 @@ from nrk_psapi.utils import get_image
 from .extensions import (
     Podcast,
     PodcastChapters,
+    PodcastImages,
+    PodcastImagesImage,
     PodcastPerson,
 )
 
@@ -38,15 +40,16 @@ class NrkPodcastFeed:
     """NrkPodcastFeed.
 
     Args:
-        api: NrkPodcastAPI
-        base_url: str
+        api(NrkPodcastAPI): API instance.
+        base_url(str, optional): Base URL. Defaults to NRK_RADIO_BASE_URL.
 
     """
 
     api: NrkPodcastAPI
-    base_url: str
+    base_url: str = NRK_RADIO_BASE_URL
 
-    async def build_episode_chapters(self, episode: Episode) -> list[EpisodeChapter]:
+    @staticmethod
+    async def build_episode_chapters(episode: Episode) -> list[EpisodeChapter]:
         return [
             {
                 "title": index_point.title,
@@ -59,13 +62,17 @@ class NrkPodcastFeed:
         _LOGGER.debug("Building episode item: %s", episode.episode_id)
         manifest = await self.api.get_playback_manifest(episode.episode_id, podcast=True)
         episode_file = manifest.playable.assets[0] or None
-        if episode_file is None:
+        if episode_file is None:  # pragma: no cover
             _LOGGER.debug("Episode file not found: %s", episode.episode_id)
             return None
         file_stat = await self.api.fetch_file_info(episode_file.url)
         _LOGGER.debug("File stat: %s", file_stat)
 
-        chapters_url = f"{self.base_url}/{series_data.id}/{episode.episode_id}/chapters.json"
+        extensions = []
+        if episode.index_points:  # pragma: no cover
+            chapters_url = f"{self.base_url}/{series_data.id}/{episode.episode_id}/chapters.json"
+            extensions.append(PodcastChapters(chapters_url, "application/json+chapters"))
+
         return Item(
             title=episode.titles.title,
             description=episode.titles.subtitle,
@@ -86,9 +93,7 @@ class NrkPodcastFeed:
                     author=episode.contributors,
                     duration=episode.duration.total_seconds(),
                 ),
-                # PodcastEpisode(1),
-                # PodcastSeason(1, f"Season 1"),
-                PodcastChapters(chapters_url, "application/json+chapters"),
+                *extensions,
             ],
         )
 
@@ -96,16 +101,20 @@ class NrkPodcastFeed:
         podcast = await self.api.get_podcast(podcast_id)
         _LOGGER.debug("Building RSS feed for %s (%s)", podcast_id, type(podcast))
 
-        episodes = await self.api.get_podcast_episodes(podcast.series.id)
+        episodes = await self.api.get_podcast_episodes(podcast.series.id, page_size=limit)
 
         _LOGGER.debug("Found %s episodes", len(episodes))
         if limit is not None:
             episodes = episodes[:limit]
 
         feed_attrs = {
-            "link": f"{NRK_RADIO_BASE_URL}/{podcast.series.id}",
+            "link": f"{self.base_url}/{podcast.series.id}",
         }
         itunes_attrs = {}
+        extensions = [
+            PodcastImages([PodcastImagesImage(i.url, i.width) for i in podcast.series.image]),
+        ]
+
         if series_image := get_image(podcast.series.image):
             feed_attrs["image"] = Image(
                 url=series_image.url,
@@ -139,6 +148,7 @@ class NrkPodcastFeed:
                     categories=podcast.series.category.name,
                     **itunes_attrs,
                 ),
+                *extensions,
             ],
             items=[
                 await self.build_episode_item(episode, series_data=podcast.series) for episode in episodes

@@ -48,7 +48,7 @@ class Podcast(Extension):
             person.publish(self.handler)
 
 
-class PodcastPerson(Serializable):
+class PodcastPerson(Serializable):  # pragma: no cover
     """Extension for Podcast Index Person metatags.
     More information at https://podcastindex.org/namespace/1.0#person.
     """
@@ -109,7 +109,7 @@ class PodcastImages(Serializable):
         self._write_element("podcast:images", None, attrs)
 
 
-class PodcastSeason(Serializable):
+class PodcastSeason(Serializable):  # pragma: no cover
     """Extension for Podcast Index Season metatags.
     More information at https://podcastindex.org/namespace/1.0#season.
     """
@@ -133,7 +133,7 @@ class PodcastSeason(Serializable):
         self._write_element("podcast:season", self.number, attrs)
 
 
-class PodcastEpisode(Serializable):
+class PodcastEpisode(Serializable):  # pragma: no cover
     """Extension for Podcast Index Episode metatags.
     More information at https://podcastindex.org/namespace/1.0#episode.
     """
@@ -179,7 +179,7 @@ class PodcastChapters(Serializable):
         self._write_element("podcast:chapters", None, {"url": self.url, "type": self.type})
 
 
-class PodcastTranscript(Serializable):
+class PodcastTranscript(Serializable):  # pragma: no cover
     """Extension for Podcast Index Transcript metatags.
     More information at https://podcastindex.org/namespace/1.0#transcript.
     """

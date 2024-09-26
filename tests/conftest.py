@@ -1,10 +1,10 @@
+import contextlib
+from importlib import reload
 import logging
-
 import os
-import pytest
 import tempfile
 
-from importlib import reload
+import pytest
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,17 +24,15 @@ def update_fixtures(request):
 
 
 @pytest.fixture
-def refresh_environment():
+def refresh_environment():  # noqa: PT004
     """Refresh the test environment."""
     import sys
 
     for key in list(sys.modules.keys()):
         if "nrk_psapi" in key:
             del sys.modules[key]
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["NRK_PSAPI_CACHE_DIR"]
-    except KeyError:
-        pass
 
 
 @pytest.fixture
@@ -53,18 +51,19 @@ def test_cache(refresh_environment):
 
 
 @pytest.fixture
-def temp_cache_dir():
+def temp_cache_dir():  # noqa: PT004
     import os
     import tempfile
 
     import nrk_psapi.caching
-    import nrk_psapi.api
 
     with tempfile.TemporaryDirectory() as tempdir:
-        os.environ["OUTLINES_CACHE_DIR"] = tempdir
+        os.environ["NRK_PSAPI_CACHE_DIR"] = tempdir
         nrk_psapi.caching.get_cache.cache_clear()
+        # noinspection PyTypeChecker
         reload(nrk_psapi)
         reload(nrk_psapi.api)
+        # noinspection PyProtectedMember
         cache_status = nrk_psapi.caching._caching_enabled
         try:
             nrk_psapi.caching._caching_enabled = True

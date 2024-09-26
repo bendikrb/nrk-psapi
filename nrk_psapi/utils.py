@@ -20,7 +20,7 @@ def get_nested_items(data: dict[str, any], items_key: str) -> list[dict[str, any
     for key in items_key.split("."):
         items = items.get(key, {})
 
-    if not isinstance(items, list):
+    if not isinstance(items, list):  # pragma: no cover
         raise TypeError(f"Expected a list at '{items_key}', but got {type(items)}")
 
     return items

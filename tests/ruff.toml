@@ -9,6 +9,7 @@ lint.extend-ignore = [
   "S101",
   "SLF001",
   "TCH002",
+  "PLR2004",
 ]
 
 lint.pylint.max-branches = 13

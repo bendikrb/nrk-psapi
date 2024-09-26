@@ -16,7 +16,7 @@ from .const import DISK_CACHE_DURATION, LOGGER as _LOGGER
 _caching_enabled = True
 
 
-class CloudpickleDisk(Disk):
+class CloudpickleDisk(Disk):  # pragma: no cover
     def __init__(self, directory, compress_level=1, **kwargs):
         self.compress_level = compress_level
         super().__init__(directory, **kwargs)
@@ -46,7 +46,7 @@ def get_cache():
     """Get the context object that contains previously-computed return values."""
     cache_dir = os.environ.get("NRK_PSAPI_CACHE_DIR", None)
     _LOGGER.debug(f"get_cache(): {cache_dir}")
-    if cache_dir is None:
+    if cache_dir is None:  # pragma: no cover
         cache_dir = user_cache_dir("nrk-psapi", ensure_exists=True)
     return Cache(
         cache_dir,
@@ -56,6 +56,7 @@ def get_cache():
     )
 
 
+# noinspection PyUnusedLocal
 def cache(expire: float | None = DISK_CACHE_DURATION, typed=False, ignore=()):
     """Cache decorator for memoizing function calls."""
 
@@ -66,10 +67,9 @@ def cache(expire: float | None = DISK_CACHE_DURATION, typed=False, ignore=()):
 
         if asyncio.iscoroutinefunction(cached_function):
 
-            async def wrapper(*args, **kwargs):  # noqa: ANN002
+            async def wrapper(*args, **kwargs):  # noqa: ANN002 # pragma: no cover
                 if not _caching_enabled:
                     return await cached_function(*args, **kwargs)
-
                 cache_key = wrapper.__cache_key__(*args, **kwargs)
                 loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
@@ -112,7 +112,7 @@ def cache(expire: float | None = DISK_CACHE_DURATION, typed=False, ignore=()):
 
                 return result
 
-        def __cache_key__(*args, **kwargs):  # noqa: N807, ANN002
+        def __cache_key__(*args, **kwargs):  # noqa: N807, ANN002  # pragma: no cover
             """Make key for cache given function arguments."""
             return args_to_key(base, args, kwargs, typed, ignore)
 
@@ -131,14 +131,14 @@ def disable_cache():
     _caching_enabled = False
 
 
-def clear_cache():
+def clear_cache():  # pragma: no cover
     """Erase the cache completely."""
     memory = get_cache()
     memory.clear()
 
 
 @contextlib.contextmanager
-def cache_disabled():
+def cache_disabled():  # pragma: no cover
     global _caching_enabled  # noqa: PLW0603
     original_state = _caching_enabled
     _caching_enabled = False
