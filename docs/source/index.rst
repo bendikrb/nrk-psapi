@@ -3,17 +3,26 @@ Welcome to NRK Podcast API
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: GET STARTED:
 
-   introduction.rst
+   installation
+   introduction
 
-   cli.rst
+.. toctree::
+   :maxdepth: 2
+   :caption: COMMAND LINE:
 
-   reference.rst
+   cli
 
+.. toctree::
+   :maxdepth: 3
+   :caption: API:
+
+   reference
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
+* :ref:`search`

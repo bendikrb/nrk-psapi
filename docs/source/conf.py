@@ -23,20 +23,32 @@ html_theme_options = {
 }
 
 extensions = [
+    "enum_tools.autoenum",
     "sphinx.ext.autodoc",
     "sphinx.ext.autodoc.typehints",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.autosectionlabel",
-    "enum_tools.autoenum",
 ]
 templates_path = ["_templates"]
 html_static_path = ["_static"]
 intersphinx_mapping = {"python": ("http://docs.python.org/3", None)}
 
+autoclass_content = "class"
 autodoc_typehints = "description"
-autodoc_typehints_description_target = "documented_params"
+autodoc_typehints_description_target = "all"
+autodoc_member_order = "groupwise"
+autodoc_class_signature = "separated"
+autodoc_typehints_format = "short"
+
+autodoc_default_options = {
+    "members": True,
+    "inherited-members": "BaseDataClassORJSONMixin, DataClassORJSONMixin, StrEnum, str, Enum, TypedDict, dict",
+    "exclude-members": "Config, from_dict, from_dict_json, from_json, to_dict, to_dict_json, to_dict_jsonb, to_jsonb, __init__, __new__",
+    "private-members": "_links, _from",
+    "undoc-members": False,
+}
 
 source_suffix = ".rst"

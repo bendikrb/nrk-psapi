@@ -2228,7 +2228,11 @@ files = [
 idna = ">=2.0"
 multidict = ">=4.0"
 
+[extras]
+doc = []
+test = []
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "7094b3a323e7c99d61f064d0f39456fbea8f64db70844c11fa39361c909c0285"
+content-hash = "282702c482e627da2ce3f767af59414aebc12bbec0e4cdf4a253e2446f76f7d6"

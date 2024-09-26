@@ -8,17 +8,6 @@ Requirements
 
 Rich requires Python 3.11 and above.
 
-
-Installation
-------------
-
-To install the library, use pip:
-
-.. code-block:: bash
-
-    pip install nrk-psapi
-
-
 Usage
 -----
 
@@ -44,4 +33,3 @@ Logging
 -------
 
 The library uses a logger named ``nrk_psapi`` to log debug information. You can configure this logger to capture logs as needed.
-

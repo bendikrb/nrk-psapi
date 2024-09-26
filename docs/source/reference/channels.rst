@@ -1,5 +1,17 @@
 Channels
 ========
 
+
+Channels: Models
+----------------
+
 .. automodule:: nrk_psapi.models.channels
-    :members: Channel, ChannelEntry, ChannelImage, ChannelType, DistrictChannel
+    :members:
+    :exclude-members: +parse_duration, serialize_timedelta, ChannelType
+
+
+Channels: Enums
+---------------
+
+.. autoclass:: nrk_psapi.models.channels.ChannelType
+    :members:

@@ -1,5 +1,17 @@
 Metadata
 ========
 
+
+Metadata: Models
+----------------
+
 .. automodule:: nrk_psapi.models.metadata
-    :members: Manifest, PodcastEpisodeMetadata, PodcastMetadata, PodcastMetadataEmbedded, Preplay
+    :members:
+    :exclude-members: +InteractionPoint
+
+
+Metadata: Enums
+---------------
+
+.. autoclass:: nrk_psapi.models.metadata.InteractionPoint
+    :members:

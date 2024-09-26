@@ -1,7 +1,6 @@
 RSS
 ===
 
-.. autoclass:: nrk_psapi.rss.NrkPodcastFeed
+.. automodule:: nrk_psapi.rss
     :members:
-    :undoc-members:
-    :exclude-members: api, base_url
+    :exclude-members: +__new__, api, base_url

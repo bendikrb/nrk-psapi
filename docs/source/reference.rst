@@ -4,16 +4,25 @@ Reference
 .. toctree::
    :maxdepth: 2
 
-   reference/api.rst
-   reference/caching.rst
-   reference/utils.rst
-   reference/rss.rst
+   reference/api
+   reference/caching
+   reference/utils
 
-   reference/catalog.rst
-   reference/channels.rst
-   reference/common.rst
-   reference/metadata.rst
-   reference/pages.rst
-   reference/playback.rst
-   reference/recommendations.rst
-   reference/search.rst
+.. toctree::
+   :maxdepth: 2
+   :caption: RSS:
+
+   reference/rss
+
+.. toctree::
+   :maxdepth: 2
+   :caption: MODELS:
+
+   reference/catalog
+   reference/channels
+   reference/common
+   reference/metadata
+   reference/pages
+   reference/playback
+   reference/recommendations
+   reference/search
