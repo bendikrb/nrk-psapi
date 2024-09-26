@@ -4,11 +4,16 @@ import sys
 
 import sphinx_book_theme
 
-sys.path.insert(0, Path("../").resolve().as_posix())
+ROOT_DIR = Path(__file__).parents[2].absolute()
 
-project = 'NRK Podcast API'
-author = '@bendikrb'
-release = Distribution.from_name("nrk_psapi").version
+sys.path.insert(0, ROOT_DIR.as_posix())
+
+
+dist = Distribution.from_name("nrk_psapi")
+
+project = dist.name
+author = f"{dist.metadata.get("author")} <{dist.metadata.get("author_email")}>"
+release = dist.version
 
 html_theme = "sphinx_book_theme"
 html_theme_path = [sphinx_book_theme.get_html_theme_path()]
@@ -27,11 +32,11 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "enum_tools.autoenum",
 ]
-templates_path = ['_templates']
+templates_path = ["_templates"]
 html_static_path = ["_static"]
 intersphinx_mapping = {"python": ("http://docs.python.org/3", None)}
 
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented_params"
 
-source_suffix = '.rst'
+source_suffix = ".rst"
