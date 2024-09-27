@@ -49,6 +49,7 @@ autodoc_default_options = {
     "exclude-members": "Config, from_dict, from_dict_json, from_json, to_dict, to_dict_json, to_dict_jsonb, to_jsonb, __init__, __new__",
     "private-members": "_links, _from",
     "undoc-members": False,
+    "show-inheritance": True,
 }
 
 source_suffix = ".rst"
