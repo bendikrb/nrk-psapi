@@ -13,20 +13,20 @@ Pages: Models
 Pages: Enums
 ------------
 
-.. autoclass:: nrk_psapi.models.pages.DisplayType
+.. autoenum:: nrk_psapi.models.pages.DisplayType
     :members:
 
-.. autoclass:: nrk_psapi.models.pages.DisplayContract
+.. autoenum:: nrk_psapi.models.pages.DisplayContract
     :members:
 
-.. autoclass:: nrk_psapi.models.pages.PlugSize
+.. autoenum:: nrk_psapi.models.pages.PlugSize
     :members:
 
-.. autoclass:: nrk_psapi.models.pages.PlugType
+.. autoenum:: nrk_psapi.models.pages.PlugType
     :members:
 
-.. autoclass:: nrk_psapi.models.pages.SectionType
+.. autoenum:: nrk_psapi.models.pages.SectionType
     :members:
 
-.. autoclass:: nrk_psapi.models.pages.PageTypeEnum
+.. autoenum:: nrk_psapi.models.pages.PageTypeEnum
     :members:

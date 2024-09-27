@@ -13,5 +13,5 @@ Metadata: Models
 Metadata: Enums
 ---------------
 
-.. autoclass:: nrk_psapi.models.metadata.InteractionPoint
+.. autoenum:: nrk_psapi.models.metadata.InteractionPoint
     :members:

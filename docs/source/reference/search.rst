@@ -13,5 +13,5 @@ Search: Models
 Search: Enums
 -------------
 
-.. autoclass:: nrk_psapi.models.search.SearchResultType
+.. autoenum:: nrk_psapi.models.search.SearchResultType
     :members:

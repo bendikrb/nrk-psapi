@@ -13,11 +13,11 @@ Playback: Models
 Playback: Enums
 ---------------
 
-.. autoclass:: nrk_psapi.models.playback.PlayableSourceMedium
+.. autoenum:: nrk_psapi.models.playback.PlayableSourceMedium
     :members:
 
-.. autoclass:: nrk_psapi.models.playback.PlayableStreamingMode
+.. autoenum:: nrk_psapi.models.playback.PlayableStreamingMode
     :members:
 
-.. autoclass:: nrk_psapi.models.playback.Playability
+.. autoenum:: nrk_psapi.models.playback.Playability
     :members:

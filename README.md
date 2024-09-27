@@ -86,7 +86,7 @@ If you have any questions or need assistance with the library, you can contact t
 [releases-shield]: https://img.shields.io/pypi/v/nrk-psapi
 [releases]: https://github.com/bendikrb/nrk-psapi/releases
 [build-shield]: https://github.com/bendikrb/nrk-psapi/actions/workflows/test.yaml/badge.svg
-[build]: https://github.com/bendikrb/nrk-psapi/actions/workflows/tests.yaml
+[build]: https://github.com/bendikrb/nrk-psapi/actions/workflows/test.yaml
 [maintenance-shield]: https://img.shields.io/maintenance/yes/2024.svg
 [py-versions-shield]: https://img.shields.io/pypi/pyversions/nrk-psapi
 [py-versions]: https://pypi.org/project/nrk-psapi/

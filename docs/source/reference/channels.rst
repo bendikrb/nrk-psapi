@@ -13,5 +13,5 @@ Channels: Models
 Channels: Enums
 ---------------
 
-.. autoclass:: nrk_psapi.models.channels.ChannelType
+.. autoenum:: nrk_psapi.models.channels.ChannelType
     :members:
