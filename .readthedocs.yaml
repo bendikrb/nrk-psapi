@@ -16,7 +16,7 @@ build:
       - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
       - |
         version="${READTHEDOCS_VERSION}"
-        version="${version,,}"
+        version=$(echo "$version" | tr '[:upper:]' '[:lower:]')
         version="${version#v}"
         poetry version --no-interaction "${version}"
 
