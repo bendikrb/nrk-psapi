@@ -13,6 +13,7 @@ import async_timeout
 import orjson
 from yarl import URL
 
+from .__version__ import __version__
 from .caching import cache, disable_cache
 from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
 from .exceptions import (
@@ -89,7 +90,7 @@ class NrkPodcastAPI:
         """Generate a header for HTTP requests to the server."""
         return {
             "Accept": "application/json",
-            "User-Agent": self.user_agent or "NrkPodcastAPI/1.0.0",
+            "User-Agent": self.user_agent or f"NrkPodcastAPI/{__version__}",
         }
 
     async def _request_paged_all(

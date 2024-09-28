@@ -17,7 +17,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from nrk_psapi import NrkPodcastAPI
+from nrk_psapi import NrkPodcastAPI, __version__
 from nrk_psapi.caching import cache_disabled
 from nrk_psapi.exceptions import NrkPsApiNotFoundError
 from nrk_psapi.models.catalog import (
@@ -297,6 +297,7 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     """Create the ArgumentParser with all relevant subparsers."""
     parser = argparse.ArgumentParser(description="A simple executable to use and test the library.")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Logging verbosity level")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s v{__version__}")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--clear-cache", action="store_true", help="Clear cache")
 
