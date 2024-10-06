@@ -13,11 +13,6 @@ build:
     post_create_environment:
       - pip install poetry
     post_install:
-      - |
-        version="${READTHEDOCS_VERSION}"
-        version=$(echo "$version" | tr '[:upper:]' '[:lower:]')
-        version="${version#v}"
-        poetry version --no-interaction "${version}"
       - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
 
 sphinx:
