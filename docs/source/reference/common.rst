@@ -2,4 +2,5 @@ Common
 ======
 
 .. automodule:: nrk_psapi.models.common
-    :members: IpCheck
+    :members: IpCheck, BaseDataClassORJSONMixin
+    :exclude-members: +from_str, Operation

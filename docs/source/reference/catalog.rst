@@ -2,16 +2,17 @@ Catalog
 =======
 
 
-Catalog: Models
----------------
+Models
+------
 
 .. automodule:: nrk_psapi.models.catalog
-    :members:
-    :exclude-members: +EpisodeType, PodcastType, SeasonDisplayType, SeriesType
+    :exclude-members: +AvailabilityStatus, EpisodeType, PodcastType, SeasonDisplayType, SeriesType
 
 
-Catalog: Enums
---------------
+Enums
+-----
+
+.. autoenum:: nrk_psapi.models.catalog.AvailabilityStatus
 
 .. autoenum:: nrk_psapi.models.catalog.EpisodeType
 

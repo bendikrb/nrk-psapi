@@ -6,7 +6,7 @@ The ``NrkPodcastAPI`` library provides an asynchronous interface to interact wit
 Requirements
 ------------
 
-Rich requires Python 3.11 and above.
+nrk-psapi requires Python 3.11 and above.
 
 Usage
 -----

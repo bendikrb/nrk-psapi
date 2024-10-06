@@ -1,6 +1,5 @@
 Client
 ======
 
-.. autoclass:: nrk_psapi.api.NrkPodcastAPI
-    :members:
-    :exclude-members: +close, request_header
+.. automodule:: nrk_psapi.api
+  :exclude-members: +request_header

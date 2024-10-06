@@ -2,5 +2,4 @@ RSS
 ===
 
 .. automodule:: nrk_psapi.rss
-    :members:
-    :exclude-members: +__new__, api, base_url
+    :exclude-members: +api, base_url

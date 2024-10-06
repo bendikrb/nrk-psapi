@@ -1,4 +1,5 @@
 from importlib.metadata import Distribution
+import os
 from pathlib import Path
 import sys
 
@@ -23,33 +24,42 @@ html_theme_options = {
 }
 
 extensions = [
+    "sphinx.ext.napoleon",
     "enum_tools.autoenum",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autodoc.typehints",
-    "sphinx.ext.autosectionlabel",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
+    "sphinx.ext.autodoc.typehints",
+    "sphinx_toolbox.more_autodoc.autotypeddict",
+    "myst_parser",
 ]
 templates_path = ["_templates"]
 html_static_path = ["_static"]
-intersphinx_mapping = {"python": ("http://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "aiohttp": ("https://docs.aiohttp.org/en/stable", None),
+    "yarl": ("https://yarl.aio-libs.org/en/stable", None),
+}
+
 
 autoclass_content = "class"
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "all"
-autodoc_member_order = "groupwise"
+autodoc_member_order = "bysource"
 autodoc_class_signature = "separated"
 autodoc_typehints_format = "short"
+# autodoc_preserve_defaults = True
 
 autodoc_default_options = {
     "members": True,
-    "inherited-members": "BaseDataClassORJSONMixin, DataClassORJSONMixin, StrEnum, str, Enum, TypedDict, dict",
+    "inherited-members": "BaseDataClassORJSONMixin, DataClassORJSONMixin, StrEnum, str, Enum, dict, object",
     "exclude-members": "Config, from_dict, from_dict_json, from_json, to_dict, to_dict_json, to_dict_jsonb, to_jsonb, __init__, __new__",
     "private-members": "_links, _from",
-    "undoc-members": False,
+    "undoc-members": True,
     "show-inheritance": True,
 }
 
 source_suffix = ".rst"
+
+os.environ["NRK_PSAPI_CACHE_ENABLE"] = "False"

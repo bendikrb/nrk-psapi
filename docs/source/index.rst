@@ -15,7 +15,7 @@ Welcome to NRK Podcast API
    cli
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
    :caption: API:
 
    reference
