@@ -26,18 +26,18 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.12"
-aiohttp = "^3.10.6"
+aiohttp = "^3.10.9"
 async-timeout = "^4.0.3"
 mashumaro = {extras = ["orjson"], version = "^3.13.1"}
 orjson = "^3.10.7"
 isodate = "^0.6.1"
-rich = "^13.8.1"
+rich = "^13.9.2"
 rfeed = "^1.1.1"
-backoff = "^2.2.1"
 asyncstdlib = "^3.12.5"
 diskcache = "^5.6.3"
 cloudpickle = "^3.0.0"
 platformdirs = "^4.3.6"
+scrypt = "^0.8.24"
 
 [tool.poetry.group.dev.dependencies]
 aresponses = "^3.0.0"
