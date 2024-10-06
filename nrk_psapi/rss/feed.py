@@ -37,16 +37,10 @@ if TYPE_CHECKING:
 
 @dataclass
 class NrkPodcastFeed:
-    """NrkPodcastFeed.
-
-    Args:
-        api(NrkPodcastAPI): API instance.
-        base_url(str, optional): Base URL. Defaults to NRK_RADIO_BASE_URL.
-
-    """
-
     api: NrkPodcastAPI
+    """API instance."""
     base_url: str = NRK_RADIO_BASE_URL
+    """Base URL. Defaults to NRK_RADIO_BASE_URL."""
 
     @staticmethod
     async def build_episode_chapters(episode: Episode) -> list[EpisodeChapter]:
@@ -59,6 +53,8 @@ class NrkPodcastFeed:
         ]
 
     async def build_episode_item(self, episode: Episode, series_data: PodcastSeries) -> Item | None:
+        """Build a :class:`rfeed.rfeed.Item` for an episode."""
+
         _LOGGER.debug("Building episode item: %s", episode.episode_id)
         manifest = await self.api.get_playback_manifest(episode.episode_id, podcast=True)
         episode_file = manifest.playable.assets[0] or None
@@ -79,8 +75,8 @@ class NrkPodcastFeed:
             guid=Guid(episode.id, isPermaLink=False),
             enclosure=Enclosure(
                 url=episode_file.url,
-                type=file_stat[1],
-                length=file_stat[0],
+                type=file_stat["content_type"],
+                length=file_stat["content_length"],
             ),
             pubDate=episode.date,
             extensions=[
@@ -98,6 +94,12 @@ class NrkPodcastFeed:
         )
 
     async def build_podcast_rss(self, podcast_id: str, limit: int | None = None) -> Feed:
+        """Build a complete RSS feed for a podcast.
+
+        The RSS feed is returned as a :class:`rfeed.rfeed.Feed` object and can be rendered as
+        XML using the :meth:`rfeed.rfeed.Feed.rss` method.
+        """
+
         podcast = await self.api.get_podcast(podcast_id)
         _LOGGER.debug("Building RSS feed for %s (%s)", podcast_id, type(podcast))
 

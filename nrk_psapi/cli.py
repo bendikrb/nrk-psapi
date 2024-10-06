@@ -18,7 +18,7 @@ from rich.table import Table
 from rich.text import Text
 
 from nrk_psapi import NrkPodcastAPI, __version__
-from nrk_psapi.caching import cache_disabled
+from nrk_psapi.caching import cache_disabled, clear_cache
 from nrk_psapi.exceptions import NrkPsApiNotFoundError
 from nrk_psapi.models.catalog import (
     PodcastSequential,
@@ -299,10 +299,16 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Logging verbosity level")
     parser.add_argument("-V", "--version", action="version", version=f"%(prog)s v{__version__}")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
-    parser.add_argument("--clear-cache", action="store_true", help="Clear cache")
+    parser.add_argument("--no-cache", action="store_true", help="Run without using cache")
 
     subparsers = parser.add_subparsers(dest="cmd")
     subparsers.required = True
+
+    #
+    # Cache
+    #
+    cache_parser = subparsers.add_parser("cache_clear", description="Clear the cache.")
+    cache_parser.set_defaults(func=cache_clear)
 
     #
     # Browse
@@ -418,6 +424,12 @@ def _add_paging_arguments(parser: argparse.ArgumentParser) -> None:
         help="The number of results to return per page.",
     )
     parser.add_argument("--page", type=int, default=1, help="The page number to return.")
+
+
+async def cache_clear(_args):
+    """Clear the cache."""
+    clear_cache()
+    console.print("Cache cleared")
 
 
 async def browse(args):
@@ -985,7 +997,7 @@ def main():
         handlers=[RichHandler(console=console)],
     )
 
-    if args.clear_cache:
+    if args.no_cache:
         with cache_disabled():
             asyncio.run(args.func(args))
     else:

@@ -12,6 +12,14 @@ from mashumaro.types import Discriminator
 from .common import BaseDataClassORJSONMixin, StrEnum, T
 
 
+class AvailabilityStatus(StrEnum):
+    COMING = "coming"
+    AVAILABLE = "available"
+    EXPIRES = "expires"
+    EXPIRED = "expired"
+    NOT_AVAILABLE_ONLINE = "notAvailableOnline"
+
+
 class PodcastType(StrEnum):
     PODCAST = "podcast"
     CUSTOM_SEASON = "customSeason"
@@ -73,13 +81,16 @@ class UsageRights(BaseDataClassORJSONMixin):
 
 @dataclass
 class Availability(BaseDataClassORJSONMixin):
-    """Represents the availability status of an episode."""
+    """Represents the Availability of a Program based on the active usage rights."""
 
-    status: str
+    status: AvailabilityStatus
     has_label: bool = field(metadata=field_options(alias="hasLabel"))
+    """Label should only be displayed if HasLabel is true."""
+    label: str | None = None
+    """Label to be showed to the user based on the AvailabilityStatus."""
 
     def __str__(self):
-        return self.status
+        return self.label if self.has_label else self.status
 
 
 @dataclass
@@ -107,19 +118,12 @@ class Titles(BaseDataClassORJSONMixin):
 
 @dataclass
 class DefaultTitles(BaseDataClassORJSONMixin):
-    """Contains default title information.
-
-    Args:
-        main_title(str): The main title of the episode.
-        subtitle(str): The subtitle of the episode.
-
-    """
+    """Contains default title information."""
 
     main_title: str = field(metadata=field_options(alias="mainTitle"))
-    """str: The maaain title of the episode. """
-
+    """The main title of the episode. """
     subtitle: str | None = field(default=None, metadata=field_options(alias="subtitle"))
-    """str: The suuubtitle of the episode. """
+    """The subtitle of the episode. """
 
     def __str__(self):
         title = self.main_title
@@ -133,10 +137,7 @@ class TemporalTitles(BaseDataClassORJSONMixin):
     """Contains temporal title information."""
 
     titles: list[str]
-    """list[str]: The titles of the episode."""
-
     default_titles: DefaultTitles = field(metadata=field_options(alias="defaultTitles"))
-    """DefaultTitles: The default titles of the episode."""
 
     def __str__(self):
         if len(self.titles):
@@ -154,55 +155,51 @@ class EpisodeContext(BaseDataClassORJSONMixin):
 
 @dataclass
 class Episode(BaseDataClassORJSONMixin):
-    """Represents a podcast episode.
-
-    Args:
-        id(str): The episode ID.
-        type(EpisodeType): The type of the episode.
-        episode_id(str): The episode ID.
-        titles(Titles): The titles of the episode.
-        duration(timedelta): The duration of the episode.
-        date(datetime): The date of the episode.
-        usage_rights(UsageRights): The usage rights of the episode.
-        availability(Availability): The availability of the episode.
-        program_information(ProgramInformation): The program information of the episode.
-        image(list[Image], optional): The images of the episode.
-        square_image(list[Image], optional): The square images of the episode.
-        category(Category, optional): The category of the episode.
-        badges(list, optional): The badges of the episode.
-        duration_in_seconds(int, optional): The duration of the episode in seconds.
-        clip_id(str, optional): The clip ID of the episode.
-        original_title(str, optional): The original title of the episode.
-        production_year(int, optional): The production year of the episode.
-        index_points(list[IndexPoint], optional): The index points of the episode.
-        contributors(list[Contributor], optional): The contributors of the episode.
-
-    """
+    """Represents a podcast episode."""
 
     _links: Links
     id: str
+    """The episode ID."""
     type: EpisodeType
+    """The type of the episode."""
     episode_id: str = field(metadata=field_options(alias="episodeId"))
+    """The episode ID."""
     titles: Titles
+    """The titles of the episode."""
     duration: timedelta = field(
         metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
     )
+    """The duration of the episode."""
     date: datetime
+    """The date of the episode."""
     usage_rights: UsageRights = field(metadata=field_options(alias="usageRights"))
+    """The usage rights of the episode."""
     availability: Availability
+    """The availability of the episode."""
     program_information: ProgramInformation | None = field(
         default=None, metadata=field_options(alias="programInformation")
     )
+    """The program information of the episode."""
     image: list[Image] | None = None
+    """The images of the episode."""
     square_image: list[Image] | None = field(default=None, metadata=field_options(alias="squareImage"))
+    """The square images of the episode."""
     category: Category | None = None
+    """The category of the episode."""
     badges: list | None = None
+    """The badges of the episode."""
     duration_in_seconds: int | None = field(default=None, metadata=field_options(alias="durationInSeconds"))
+    """The duration of the episode in seconds."""
     clip_id: str | None = field(default=None, metadata=field_options(alias="clipId"))
+    """The clip ID of the episode."""
     original_title: str | None = field(default=None, metadata=field_options(alias="originalTitle"))
+    """The original title of the episode."""
     production_year: int | None = field(default=None, metadata=field_options(alias="productionYear"))
+    """The production year of the episode."""
     index_points: list[IndexPoint] | None = field(default=None, metadata=field_options(alias="indexPoints"))
+    """The index points of the episode."""
     contributors: list[Contributor] | None = None
+    """The contributors of the episode."""
 
     @classmethod
     def __pre_deserialize__(cls: type[T], d: T) -> T:
@@ -574,27 +571,23 @@ class PlaylistMusicItem(PlaylistItem):
 
 @dataclass
 class Series(BaseDataClassORJSONMixin):
-    """Represents a series object.
-
-    Args:
-        id (str): The ID of the series.
-        series_id (str): The ID of the series.
-        title (str): The title of the series.
-        type (PodcastType): The type of the series.
-        images (list[Image]): The images of the series.
-        square_images (list[Image]): The square images of the series.
-        season_id (str, optional): The ID of the season.
-
-    """
+    """Represents a series object."""
 
     _links: Links
     id: str
+    """The ID of the series."""
     series_id: str = field(metadata=field_options(alias="seriesId"))
+    """The ID of the series."""
     title: str
+    """The title of the series."""
     type: PodcastType
+    """The type of the series."""
     images: list[Image]
+    """The images of the series."""
     square_images: list[Image] = field(metadata=field_options(alias="squareImages"))
+    """The square images of the series."""
     season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
+    """The ID of the season."""
 
 
 @dataclass

@@ -791,10 +791,10 @@ async def test_fetch_file_info(
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        content_length, content_type = await nrk_api.fetch_file_info(URL(url))
+        file_info = await nrk_api.fetch_file_info(URL(url))
 
-    assert content_length == int(expected_content_length)
-    assert content_type == expected_content_type
+    assert file_info["content_length"] == int(expected_content_length)
+    assert file_info["content_type"] == expected_content_type
 
 
 async def test_internal_session(aresponses: ResponsesMockServer):

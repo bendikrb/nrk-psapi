@@ -33,7 +33,7 @@ from .catalog import (
     UsageRights,
 )
 from .channels import Channel, ChannelEntry, ChannelImage, ChannelType, DistrictChannel
-from .common import IpCheck
+from .common import FetchedFileInfo, IpCheck
 from .metadata import (
     Manifest,
     PodcastEpisodeMetadata,
@@ -185,6 +185,7 @@ __all__ = [
     "Episode",
     "EpisodePlug",
     "EpisodeType",
+    "FetchedFileInfo",
     "get_operation",
     "Image",
     "Included",
