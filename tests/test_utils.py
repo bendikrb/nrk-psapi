@@ -27,10 +27,10 @@ async def test_fetch_file_info(aresponses: ResponsesMockServer):
     )
 
     async with ClientSession() as session:
-        content_length, content_type = await fetch_file_info(URL(url), session)
+        file_info = await fetch_file_info(URL(url), session)
 
-    assert content_length == int(expected_content_length)
-    assert content_type == expected_content_type
+    assert file_info["content_length"] == int(expected_content_length)
+    assert file_info["content_type"] == expected_content_type
 
 
 async def test_fetch_file_info_no_session(aresponses: ResponsesMockServer):
@@ -50,7 +50,7 @@ async def test_fetch_file_info_no_session(aresponses: ResponsesMockServer):
         ),
     )
 
-    content_length, content_type = await fetch_file_info(URL(url))
+    file_info = await fetch_file_info(URL(url))
 
-    assert content_length == int(expected_content_length)
-    assert content_type == expected_content_type
+    assert file_info["content_length"] == int(expected_content_length)
+    assert file_info["content_type"] == expected_content_type

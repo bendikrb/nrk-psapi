@@ -14,7 +14,7 @@ import orjson
 from yarl import URL
 
 from .__version__ import __version__
-from .caching import cache, disable_cache
+from .caching import cache, disable_cache, set_cache_dir
 from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
 from .exceptions import (
     NrkPsApiConnectionError,
@@ -31,7 +31,7 @@ from .models.catalog import (
     SeriesType,
 )
 from .models.channels import Channel
-from .models.common import IpCheck
+from .models.common import FetchedFileInfo, IpCheck
 from .models.metadata import PodcastMetadata
 from .models.pages import (
     Curated,
@@ -57,26 +57,26 @@ from .utils import (
     fetch_file_info,
     get_nested_items,
     sanitize_string,
+    tiled_images,
 )
 
 
 @dataclass
 class NrkPodcastAPI:
-    """NrkPodcastAPI.
-
-    Args:
-        user_agent(str, optional): User agent string
-        enable_cache(bool, optional): Enable caching, defaults to True
-        request_timeout(int, optional): Request timeout in seconds, defaults to 15
-        session(ClientSession, optional): Optional web session to use for requests
-
-    """
-
     user_agent: str | None = None
+    """User agent string."""
     enable_cache: bool = True
+    """Enable caching, defaults to True."""
+    cache_directory: str | None = None
+    """Cache directory, defaults to (in order):
 
+    1. Value of environment variable `NRK_PSAPI_CACHE_DIR`
+    2. `~/.cache/nrk-psapi`
+    """
     request_timeout: int = 15
+    """Request timeout in seconds, defaults to 15."""
     session: ClientSession | None = None
+    """Optional web session to use for requests."""
 
     _close_session: bool = False
 
@@ -84,6 +84,9 @@ class NrkPodcastAPI:
         if not self.enable_cache:
             disable_cache()
             _LOGGER.warning("Cache disabled")
+
+        if self.cache_directory is not None:
+            set_cache_dir(self.cache_directory)
 
     @property
     def request_header(self) -> dict[str, str]:
@@ -497,7 +500,7 @@ class NrkPodcastAPI:
         """Browse all series, podcast and umbrella seasons, optionally filtered by category.
 
         Alphabetical listing of all series, podcasts and umbrella seasons that are not excluded from search
-        results in given category. Categories correspond to those in from `radio_pages`.
+        results in given category. Categories correspond to those in from :meth:`~.radio_pages`.
         For the category 'podcast', all podcasts are listed, also those excluded from search results.
 
         Args:
@@ -534,7 +537,7 @@ class NrkPodcastAPI:
             query(str): Search query.
             per_page(int, optional): Number of items per page. Defaults to 50.
             page(int, optional): Page number. Defaults to 1.
-            search_type(SearchResultType, optional): Search type, one of :class:`~SearchResultType`. Defaults to all.
+            search_type(SearchResultType, optional): Search type, one of :class:`~.models.search.SearchResultType`. Defaults to all.
 
         """
         result = await self._request(
@@ -586,7 +589,7 @@ class NrkPodcastAPI:
     @cache(ignore=(0,))
     async def curated_podcasts(self) -> Curated:
         """Get curated podcasts.
-        This is a wrapper around :meth:`radio_page`, with the section_id set to "podcast" and
+        This is a wrapper around :meth:`~NrkPodcastAPI.radio_page`, with the section_id set to "podcast" and
         some logic to make it easier to use for accessing curated podcasts.
 
         """
@@ -616,17 +619,20 @@ class NrkPodcastAPI:
         return Curated(sections=sections)
 
     @cache(ignore=(0,))
-    async def fetch_file_info(self, url: URL | str) -> tuple[int, str]:
-        """Proxies call to `utils.fetch_file_info`, passing on self.session.
-
-        Args:
-            url(URL | str): URL to fetch file info from.
-
-        Returns:
-            tuple[int, str]: content-length and content-type
-
-        """
+    async def fetch_file_info(self, url: URL | str) -> FetchedFileInfo:
+        """Proxies call to :func:`.utils.fetch_file_info`, passing on :attr:`~.NrkPodcastAPI.session`."""
         return await fetch_file_info(url, self.session)
+
+    @cache(ignore=(0,))
+    async def generate_tiled_images(
+        self,
+        image_urls: list[str],
+        tile_size: int = 100,
+        columns: int = 3,
+        aspect_ratio: str | None = None,
+    ) -> bytes:
+        """Proxies call to :func:`.utils.tiled_images`, passing on :attr:`~.session`."""
+        return await tiled_images(image_urls, tile_size, columns, aspect_ratio, session=self.session)
 
     async def close(self) -> None:
         """Close open client session."""
