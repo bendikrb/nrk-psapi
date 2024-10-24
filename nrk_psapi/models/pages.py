@@ -454,8 +454,8 @@ class PodcastPlug(Plug):
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("title", self.title)
-        table.add_row("tagline", self.tagline)
+        table.add_row("podcast.podcast_id", self.podcast.podcast_id)
+        table.add_row("podcast.podcast_title", self.podcast.podcast_title)
         table.add_row("podcast.number_of_episodes", str(self.podcast.number_of_episodes))
         yield table
 
@@ -486,7 +486,13 @@ class PodcastSeasonPlug(Plug):
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("podcast_season", str(self.podcast_season))
+        table.add_row("podcast_season.podcast_id", self.podcast_season.podcast_id)
+        table.add_row("podcast_season.season_id", self.podcast_season.season_id)
+        table.add_row("podcast_season.season_number", str(self.podcast_season.season_number))
+        table.add_row("podcast_season.number_of_episodes", str(self.podcast_season.number_of_episodes))
+        table.add_row("podcast_season.image_url", self.podcast_season.image_url)
+        table.add_row("podcast_season.podcast_title", self.podcast_season.podcast_title)
+        table.add_row("podcast_season.podcast_season_title", self.podcast_season.podcast_season_title)
         yield table
 
 
@@ -507,8 +513,8 @@ class LinkPlug(Plug):
 @dataclass(kw_only=True)
 class PagePlug(Plug):
     type = PlugType.PAGE
-    description: str
     page: PagePlugInner
+    description: str | None = None
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
