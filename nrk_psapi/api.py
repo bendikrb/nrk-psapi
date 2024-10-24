@@ -419,7 +419,7 @@ class NrkPodcastAPI:
         season_id: str | None = None,
         *,
         page_size: int | None = None,
-        page: int = 1,
+        page: int | None = None,
     ) -> list[Episode]:
         """Get podcast episodes.
 

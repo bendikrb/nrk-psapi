@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from unittest.mock import AsyncMock
+import socket
+from unittest.mock import AsyncMock, patch
 
 import aiohttp
 from aiohttp.web_response import json_response
@@ -355,7 +356,7 @@ async def test_get_series_episodes(
     )
     async with aiohttp.ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        result = await nrk_api.get_series_episodes(series_id, season_id, page_size=20, page=1)
+        result = await nrk_api.get_series_episodes(series_id, season_id)
         assert isinstance(result, list)
         assert len(result) > 0
         assert all(isinstance(item, Episode) for item in result)
@@ -879,6 +880,15 @@ async def test_http_error429(aresponses: ResponsesMockServer):
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
         with pytest.raises(NrkPsApiRateLimitError):
             assert await nrk_api._request("ipcheck")
+
+
+async def test_network_error():
+    """Test network error handling."""
+    async with aiohttp.ClientSession() as session:
+        with patch.object(session, 'request', side_effect=socket.gaierror):
+            nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
+            with pytest.raises(NrkPsApiConnectionError):
+                assert await nrk_api._request("ipcheck")
 
 
 async def test_unexpected_response(aresponses: ResponsesMockServer):
