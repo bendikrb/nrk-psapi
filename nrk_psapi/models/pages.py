@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta  # noqa: TCH003
+from datetime import datetime, timedelta  # noqa: TCH003
 from typing import TYPE_CHECKING, Literal
 
 from isodate import duration_isoformat, parse_duration
@@ -10,9 +10,7 @@ from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 from rich.table import Table
 
-from nrk_psapi.utils import sanitize_string
-
-from .catalog import Link, Titles, WebImage
+from .catalog import Link, WebImage
 from .common import BaseDataClassORJSONMixin, StrEnum
 
 if TYPE_CHECKING:
@@ -28,15 +26,19 @@ class DisplayType(StrEnum):
 class DisplayContract(StrEnum):
     HERO = "hero"
     EDITORIAL = "editorial"
-    INLINEHERO = "inlineHero"
+    INLINE_HERO = "inlineHero"
     LANDSCAPE = "landscape"
-    LANDSCAPELOGO = "landscapeLogo"
+    LANDSCAPE_LOGO = "landscapeLogo"
     SIMPLE = "simple"
     SQUARED = "squared"
-    SQUAREDLOGO = "squaredLogo"
-    NYHETSATOM = "nyhetsAtom"
-    RADIOMULTIHERO = "radioMultiHero"
-    SIDEKICKLOGO = "sidekickLogo"
+    SQUARED_LOGO = "squaredLogo"
+    NYHETS_ATOM = "nyhetsAtom"
+    RADIO_MULTI_HERO = "radioMultiHero"
+    SIDEKICK_LOGO = "sidekickLogo"
+
+
+class PlaceholderType(StrEnum):
+    CATEGORY_PERSONALISED_RECOMMENDATIONS = "categoryPersonalisedRecommendations"
 
 
 class PlugSize(StrEnum):
@@ -69,7 +71,7 @@ class PageTypeEnum(StrEnum):
 
 @dataclass
 class Placeholder(BaseDataClassORJSONMixin):
-    type: str | None = None
+    type: PlaceholderType | None = None
     title: str | None = None
 
 
@@ -179,6 +181,16 @@ class PodcastEpisodePlugLinks(BaseDataClassORJSONMixin):
 
 
 @dataclass
+class EpisodeLinks(BaseDataClassORJSONMixin):
+    program: Link
+    series: Link
+    playback_metadata: Link = field(metadata=field_options(alias="playbackMetadata"))
+    playback_manifest: Link = field(metadata=field_options(alias="playbackManifest"))
+    favourite: Link
+    share: Link
+
+
+@dataclass
 class EpisodePlugLinks(BaseDataClassORJSONMixin):
     episode: str
     mediaelement: str
@@ -190,6 +202,24 @@ class EpisodePlugLinks(BaseDataClassORJSONMixin):
 class StandaloneProgramPlugLinks(BaseDataClassORJSONMixin):
     program: str
     mediaelement: str
+
+
+@dataclass
+class PodcastLinks(BaseDataClassORJSONMixin):
+    podcast: Link
+    share: Link
+    favourite: TemplatedLink | None = None
+
+
+@dataclass
+class PodcastEpisodeLinks(BaseDataClassORJSONMixin):
+    podcast_episode: Link = field(metadata=field_options(alias="podcastEpisode"))
+    podcast: Link
+    audio_download: Link = field(metadata=field_options(alias="audioDownload"))
+    share: Link
+    playback_metadata: Link = field(metadata=field_options(alias="playbackMetadata"))
+    playback_manifest: Link = field(metadata=field_options(alias="playbackManifest"))
+    favourite: TemplatedLink | None = None
 
 
 @dataclass
@@ -220,6 +250,13 @@ class Links(BaseDataClassORJSONMixin):
 
 @dataclass
 class Plug(BaseDataClassORJSONMixin):
+    id: str
+    image: WebImage
+    backdrop_image: WebImage | None = field(default=None, metadata=field_options(alias="backdropImage"))
+    title: str | None = None
+    tagline: str | None = None
+    accessibility_label: str | None = field(default=None, metadata=field_options(alias="accessibilityLabel"))
+
     class Config(BaseConfig):
         discriminator = Discriminator(
             field="type",
@@ -229,6 +266,9 @@ class Plug(BaseDataClassORJSONMixin):
 
 @dataclass
 class Section(BaseDataClassORJSONMixin):
+    id: str
+    e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
+
     class Config(BaseConfig):
         discriminator = Discriminator(
             field="type",
@@ -236,99 +276,84 @@ class Section(BaseDataClassORJSONMixin):
         )
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PlaceholderSection(Section):
     type = SectionType.PLACEHOLDER
     placeholder: Placeholder
-    id: str | None = None
-    e_commerce: SectionEcommerce | None = field(default=None, metadata=field_options(alias="eCommerce"))
 
 
 @dataclass
 class PluggedEpisode(BaseDataClassORJSONMixin):
-    title: str = field(init=False)
-    titles: Titles
-    image: WebImage
+    program_id: str = field(metadata=field_options(alias="programId"))
+    series_id: str = field(metadata=field_options(alias="seriesId"))
+    series_title: str = field(metadata=field_options(alias="seriesTitle"))
+    episode_title: str = field(metadata=field_options(alias="episodeTitle"))
     duration: timedelta = field(
         metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
     )
-    series: PluggedSeries | None = None
-
-    def __post_init__(self):
-        self.title = self.titles.title
+    _links: EpisodeLinks
 
 
 @dataclass
 class PluggedSeries(BaseDataClassORJSONMixin):
-    title: str = field(init=False)
-    titles: Titles
+    series_id: str = field(metadata=field_options(alias="seriesId"))
+    series_title: str = field(metadata=field_options(alias="seriesTitle"))
+    _links: SeriesLinks
     image: WebImage | None = None
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
-
-    def __post_init__(self):
-        self.title = self.titles.title
 
 
 @dataclass
 class PluggedChannel(BaseDataClassORJSONMixin):
-    title: str = field(init=False)
-    titles: Titles
-    image: WebImage | None = None
-
-    def __post_init__(self):
-        self.title = self.titles.title
+    channel_id: str = field(metadata=field_options(alias="channelId"))
+    channel_title: str = field(metadata=field_options(alias="channelTitle"))
+    show_live_badge: bool = field(metadata=field_options(alias="showLiveBadge"))
+    _links: ChannelLinks
 
 
 @dataclass
 class PluggedStandaloneProgram(BaseDataClassORJSONMixin):
-    title: str = field(init=False)
-    titles: Titles
-    image: WebImage
+    program_id: str = field(metadata=field_options(alias="programId"))
+    program_title: str = field(metadata=field_options(alias="programTitle"))
     duration: timedelta = field(
         metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
     )
-
-    def __post_init__(self):
-        self.title = self.titles.title
+    _links: StandaloneProgramLinks
 
 
 @dataclass
 class PluggedPodcast(BaseDataClassORJSONMixin):
-    podcast_title: str = field(init=False)
-    titles: Titles
+    podcast_id: str = field(metadata=field_options(alias="podcastId"))
+    podcast_title: str = field(metadata=field_options(alias="podcastTitle"))
+    _links: PodcastLinks
     image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
     number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
-
-    def __post_init__(self):
-        self.podcast_title = self.titles.title
 
 
 @dataclass
 class PluggedPodcastEpisode(BaseDataClassORJSONMixin):
-    title: str = field(init=False)
-    titles: Titles
+    episode_id: str = field(metadata=field_options(alias="episodeId"))
+    podcast_id: str = field(metadata=field_options(alias="podcastId"))
+    podcast_title: str = field(metadata=field_options(alias="podcastTitle"))
+    podcast_episode_title: str = field(metadata=field_options(alias="podcastEpisodeTitle"))
     duration: timedelta = field(
         metadata=field_options(deserialize=parse_duration, serialize=duration_isoformat)
     )
     image_url: str = field(metadata=field_options(alias="imageUrl"))
-    podcast: PluggedPodcast
-    podcast_title: str = field(init=False)
-
-    def __post_init__(self):
-        self.title = self.titles.title
-        self.podcast_title = self.podcast.podcast_title
+    _links: PodcastEpisodeLinks
+    podcast: PluggedPodcast | None = None
 
 
 @dataclass
 class PluggedPodcastSeason(BaseDataClassORJSONMixin):
-    _links: PodcastSeasonLinks | None = None
-    podcast_id: str | None = field(default=None, metadata=field_options(alias="podcastId"))
-    season_id: str | None = field(default=None, metadata=field_options(alias="seasonId"))
-    season_number: int | None = field(default=None, metadata=field_options(alias="seasonNumber"))
-    number_of_episodes: int | None = field(default=None, metadata=field_options(alias="numberOfEpisodes"))
-    image_url: str | None = field(default=None, metadata=field_options(alias="imageUrl"))
-    podcast_title: str | None = field(default=None, metadata=field_options(alias="podcastTitle"))
-    podcast_season_title: str | None = field(default=None, metadata=field_options(alias="podcastSeasonTitle"))
+    _links: PodcastSeasonLinks
+    podcast_id: str = field(metadata=field_options(alias="podcastId"))
+    season_id: str = field(metadata=field_options(alias="seasonId"))
+    season_number: int = field(metadata=field_options(alias="seasonNumber"))
+    number_of_episodes: int = field(metadata=field_options(alias="numberOfEpisodes"))
+    image_url: str = field(metadata=field_options(alias="imageUrl"))
+    podcast_title: str = field(metadata=field_options(alias="podcastTitle"))
+    podcast_season_title: str = field(metadata=field_options(alias="podcastSeasonTitle"))
 
 
 @dataclass
@@ -360,105 +385,69 @@ class Pages(BaseDataClassORJSONMixin):
     pages: list[PageListItem]
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ChannelPlug(Plug):
-    id: str = field(init=False)
     type = PlugType.CHANNEL
-    _links: ChannelPlugLinks
     channel: PluggedChannel
-
-    def __post_init__(self):
-        self.id = self._links.channel.split("/").pop()
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("channel.title", self.channel.title)
+        table.add_row("channel.title", self.channel.channel_title)
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SeriesPlug(Plug):
-    id: str = field(init=False)
-    title: str = field(init=False)
     type = PlugType.SERIES
-    _links: SeriesPlugLinks
     series: PluggedSeries
-
-    def __post_init__(self):
-        self.id = self._links.series.split("/").pop()
-        self.title = self.series.title
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("series.title", self.series.title)
-        table.add_row("series.tagline", self.series.titles.subtitle)
+        table.add_row("series.title", self.series.series_title)
+        table.add_row("series.id", self.series.series_id)
         table.add_row("series.number_of_episodes", str(self.series.number_of_episodes))
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class EpisodePlug(Plug):
-    id: str = field(init=False)
-    series_id: str = field(init=False)
-    title: str = field(init=False)
     type = PlugType.EPISODE
-    _links: EpisodePlugLinks
     episode: PluggedEpisode
 
-    def __post_init__(self):
-        self.id = self._links.episode.split("/").pop()
-        self.series_id = self._links.series.split("/").pop()
-        self.title = self.episode.title
-
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("series_id", self.series_id)
-        table.add_row("episode.title", self.episode.title)
+        table.add_row("episode.title", self.episode.episode_title)
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class StandaloneProgramPlug(Plug):
-    id: str = field(init=False)
     type = PlugType.STANDALONE_PROGRAM
-    _links: StandaloneProgramPlugLinks
-    program: PluggedStandaloneProgram
-
-    def __post_init__(self):
-        self.id = self._links.program.split("/").pop()
+    standalone_program: PluggedStandaloneProgram = field(metadata=field_options(alias="standaloneProgram"))
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("program.title", self.program.title)
-        table.add_row("program.duration", str(self.program.duration))
+        table.add_row("program.title", self.standalone_program.program_title)
+        table.add_row("program.duration", str(self.standalone_program.duration))
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PodcastPlug(Plug):
-    id: str = field(init=False)
-    title: str = field(init=False)
-    tagline: str = field(init=False)
     type = PlugType.PODCAST
     podcast: PluggedPodcast
-    _links: PodcastPlugLinks
-
-    def __post_init__(self):
-        self.id = self._links.podcast.split("/").pop()
-        self.title = self.podcast.podcast_title
-        self.tagline = self.podcast.titles.subtitle
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
@@ -471,34 +460,26 @@ class PodcastPlug(Plug):
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PodcastEpisodePlug(Plug):
-    id: str = field(init=False)
-    podcast_id: str = field(init=False)
     type = PlugType.PODCAST_EPISODE
     podcast_episode: PluggedPodcastEpisode = field(metadata=field_options(alias="podcastEpisode"))
-    _links: PodcastEpisodePlugLinks
-
-    def __post_init__(self):
-        self.id = self._links.podcast_episode.split("/").pop()
-        self.podcast_id = self._links.podcast.split("/").pop()
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         yield f"[b]{self.type}[/b]"
         table = Table("Attribute", "Value")
         table.add_row("id", self.id)
-        table.add_row("podcast_id", self.podcast_id)
-        table.add_row("podcast_episode.title", self.podcast_episode.title)
+        table.add_row("podcast_id", self.podcast_episode.podcast_id)
+        table.add_row("podcast_episode.title", self.podcast_episode.podcast_episode_title)
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PodcastSeasonPlug(Plug):
     type = PlugType.PODCAST_SEASON
-    id: str
     podcast_season: PluggedPodcastSeason = field(metadata=field_options(alias="podcastSeason"))
-    image: WebImage | None = None
+    description: str | None = None
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
@@ -509,12 +490,10 @@ class PodcastSeasonPlug(Plug):
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class LinkPlug(Plug):
     type = PlugType.LINK
     link: LinkPlugInner
-    id: str | None = None
-    image: WebImage | None = None
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
@@ -525,12 +504,11 @@ class LinkPlug(Plug):
         yield table
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PagePlug(Plug):
     type = PlugType.PAGE
+    description: str
     page: PagePlugInner
-    id: str | None = None
-    image: WebImage | None = None
 
     # noinspection PyUnusedLocal
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
@@ -543,15 +521,16 @@ class PagePlug(Plug):
 
 @dataclass
 class Included(BaseDataClassORJSONMixin):
-    section_id: str = field(init=False)
     title: str
     plugs: list[Plug]
+    count: int
+    display_contract: DisplayContract | None = field(
+        default=None, metadata=field_options(alias="displayContract")
+    )
+    plug_size: PlugSize | None = field(default=None, metadata=field_options(alias="plugSize"))
 
-    def __post_init__(self):
-        self.section_id = sanitize_string(self.title, "-")
 
-
-@dataclass
+@dataclass(kw_only=True)
 class IncludedSection(Section):
     type = SectionType.INCLUDED
     included: Included
@@ -559,13 +538,17 @@ class IncludedSection(Section):
 
 @dataclass
 class Page(BaseDataClassORJSONMixin):
-    id: str = field(init=False)
+    id: str
     title: str
+    published_time: datetime = field(metadata=field_options(alias="publishedTime"))
     sections: list[Section]
     _links: PageLinks
-
-    def __post_init__(self):
-        self.id = self._links.self.href.split("/").pop()
+    page_version: str | None = field(default=None, metadata=field_options(alias="pageVersion"))
+    display_type: DisplayType | None = field(default=None, metadata=field_options(alias="displayType"))
+    image: WebImage | None = None
+    image_square: WebImage | None = field(default=None, metadata=field_options(alias="imageSquare"))
+    buttons: list[ButtonItem] | None = None
+    back_button: ButtonItem | None = field(default=None, metadata=field_options(alias="backButton"))
 
 
 @dataclass

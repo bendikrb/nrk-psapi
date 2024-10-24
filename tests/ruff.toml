@@ -7,6 +7,7 @@ lint.extend-select = [
 
 lint.extend-ignore = [
   "S101",
+  "S108",
   "SLF001",
   "TCH002",
   "PLR2004",

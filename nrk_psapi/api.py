@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 import socket
 
-from aiohttp.client import ClientError, ClientResponseError, ClientSession
+from aiohttp.client import ClientError, ClientResponse, ClientResponseError, ClientSession
 from aiohttp.hdrs import METH_GET
 import async_timeout
 import orjson
@@ -26,6 +26,9 @@ from .exceptions import (
 from .models.catalog import (
     Episode,
     Podcast,
+    PodcastSequential,
+    PodcastStandard,
+    PodcastUmbrella,
     Program,
     Season,
     SeriesType,
@@ -56,7 +59,6 @@ from .models.search import (
 from .utils import (
     fetch_file_info,
     get_nested_items,
-    sanitize_string,
     tiled_images,
 )
 
@@ -92,7 +94,7 @@ class NrkPodcastAPI:
     def request_header(self) -> dict[str, str]:
         """Generate a header for HTTP requests to the server."""
         return {
-            "Accept": "application/json",
+            "Accept": "application/json;api-version=3.5",
             "User-Agent": self.user_agent or f"NrkPodcastAPI/{__version__}",
         }
 
@@ -136,6 +138,17 @@ class NrkPodcastAPI:
             page = 1
         return await self._request(uri, method, params={"pageSize": page_size, "page": page}, **kwargs)
 
+    @staticmethod
+    async def _request_check_status(response: ClientResponse):
+        if response.status == HTTPStatus.TOO_MANY_REQUESTS:
+            raise NrkPsApiRateLimitError("Too many requests to NRK API. Try again later.")
+        if response.status == HTTPStatus.NOT_FOUND:
+            raise NrkPsApiNotFoundError("Resource not found")
+        if response.status == HTTPStatus.BAD_REQUEST:
+            raise NrkPsApiError("Bad request syntax or unsupported method")
+        if response.status != HTTPStatus.OK:
+            raise NrkPsApiError(response)
+
     async def _request(
         self,
         uri: str,
@@ -169,8 +182,8 @@ class NrkPodcastAPI:
                     url,
                     **kwargs,
                     headers=headers,
+                    raise_for_status=self._request_check_status,
                 )
-                response.raise_for_status()
         except asyncio.TimeoutError as exception:
             raise NrkPsApiConnectionTimeoutError(
                 "Timeout occurred while connecting to NRK API"
@@ -180,12 +193,6 @@ class NrkPodcastAPI:
             ClientResponseError,
             socket.gaierror,
         ) as exception:
-            if hasattr(exception, "status") and exception.status == HTTPStatus.TOO_MANY_REQUESTS:
-                raise NrkPsApiRateLimitError("Too many requests to NRK API. Try again later.") from exception
-            if hasattr(exception, "status") and exception.status == HTTPStatus.NOT_FOUND:
-                raise NrkPsApiNotFoundError("Resource not found") from exception
-            if hasattr(exception, "status") and exception.status == HTTPStatus.BAD_REQUEST:
-                raise NrkPsApiError("Bad request syntax or unsupported method") from exception
             msg = f"Error occurred while communicating with NRK API: {exception}"
             raise NrkPsApiConnectionError(msg) from exception
 
@@ -370,7 +377,9 @@ class NrkPodcastAPI:
         return Program.from_dict(result)
 
     @cache(ignore=(0,))
-    async def get_podcast(self, podcast_id: str) -> Podcast:
+    async def get_podcast(
+        self, podcast_id: str
+    ) -> Podcast | PodcastStandard | PodcastUmbrella | PodcastSequential:
         """Get podcast.
 
         Args:
@@ -582,7 +591,7 @@ class NrkPodcastAPI:
             return page
 
         for section in page.sections:
-            if isinstance(section, IncludedSection) and section.included.section_id == section_id:
+            if isinstance(section, IncludedSection) and section.id == section_id:
                 return section.included
         return None
 
@@ -611,7 +620,7 @@ class NrkPodcastAPI:
                 if len(podcasts) > 1:
                     sections.append(
                         CuratedSection(
-                            id=sanitize_string(section.included.title),
+                            id=section.id,
                             title=section.included.title,
                             podcasts=podcasts,
                         )
@@ -630,7 +639,7 @@ class NrkPodcastAPI:
         tile_size: int = 100,
         columns: int = 3,
         aspect_ratio: str | None = None,
-    ) -> bytes:
+    ) -> bytes:  # pragma: no cover
         """Proxies call to :func:`.utils.tiled_images`, passing on :attr:`~.session`."""
         return await tiled_images(image_urls, tile_size, columns, aspect_ratio, session=self.session)
 

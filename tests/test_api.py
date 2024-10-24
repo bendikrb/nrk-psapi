@@ -681,6 +681,10 @@ async def test_curated_podcasts(aresponses: ResponsesMockServer):
         assert isinstance(result.sections, list)
         assert len(result.sections) > 0
         assert all(isinstance(item, CuratedSection) for item in result.sections)
+        section = result.get_section_by_id("70bef2b0-2b46-11ec-9a7f-45ebc1a764fe")
+        assert isinstance(section, CuratedSection)
+        section = result.get_section_by_id("non-existent")
+        assert section is None
 
 
 async def test_pages(aresponses: ResponsesMockServer):
@@ -705,7 +709,7 @@ async def test_pages(aresponses: ResponsesMockServer):
     ("page_id", "section_id"),
     [
         ("podcast", None),
-        ("podcast", "damer-som-satte-spor"),
+        ("podcast", "8a135591-dd27-11ee-8f21-d12745ae0a69"),
         ("podcast", "nonexistent"),
     ],
 )
@@ -739,30 +743,27 @@ async def test_podcast_page(
             included_sections = [item for item in result.sections if isinstance(item, IncludedSection)]
             plugs = [plug for section in included_sections for plug in section.included.plugs]
         assert all(isinstance(plug, Plug) for plug in plugs)
-        for plug in plugs:  # pragma: no cover
+        for plug in plugs:
+            assert len(plug.id) > 0
             if isinstance(plug, PagePlug):
                 assert len(plug.page.page_id) > 0
             if isinstance(plug, PodcastPlug):
-                assert len(plug.title) > 0
+                assert len(plug.podcast.podcast_title) > 0
             if isinstance(plug, PodcastEpisodePlug):
-                assert len(plug.podcast_episode.title) > 0
+                assert len(plug.podcast_episode.podcast_episode_title) > 0
             if isinstance(plug, PodcastSeasonPlug):
                 assert len(plug.podcast_season.podcast_season_title) > 0
             if isinstance(plug, SeriesPlug):
-                assert len(plug.series.title) > 0
-                assert len(plug.id) > 0
+                assert len(plug.series.series_title) > 0
             if isinstance(plug, EpisodePlug):
-                assert len(plug.id) > 0
-                assert len(plug.series_id) > 0
-                assert len(plug.episode.title) > 0
+                assert len(plug.episode.episode_title) > 0
+                assert len(plug.episode.program_id) > 0
             if isinstance(plug, LinkPlug):
                 assert len(str(plug.link)) > 0
             if isinstance(plug, ChannelPlug):
-                assert len(plug.id) > 0
-                assert len(plug.channel.title) > 0
+                assert len(plug.channel.channel_title) > 0
             if isinstance(plug, StandaloneProgramPlug):
-                assert len(plug.id) > 0
-                assert len(plug.program.title) > 0
+                assert len(plug.standalone_program.program_title) > 0
 
 
 @pytest.mark.parametrize(
@@ -821,7 +822,6 @@ async def test_timeout(aresponses: ResponsesMockServer):
     async def response_handler(_: aiohttp.ClientResponse):
         """Response handler for this test."""
         await asyncio.sleep(2)
-        return aresponses.Response(body="Helluu")
 
     aresponses.add(
         URL(PSAPI_BASE_URL).host,

@@ -49,6 +49,17 @@ async def test_clear_cache(test_cache):
     assert len(store) == store_size + 1
 
 
+async def test_custom_cache_directory(test_cache):
+    """Make sure that we can set a custom cache directory."""
+    import nrk_psapi
+
+    api = nrk_psapi.NrkPodcastAPI(cache_directory="/tmp")
+    assert api.cache_directory == "/tmp"
+
+    memory = nrk_psapi.get_cache()
+    assert memory.directory == "/tmp"
+
+
 async def test_disable_cache(test_cache):
     """Make sure that we can disable the cache."""
     import nrk_psapi
