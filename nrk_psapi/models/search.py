@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime  # noqa: TCH003
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -314,11 +314,14 @@ class SearchResponseResultSeriesEpisode(SearchResponseResultEpisode):
     type = SearchResultType.SERIES_EPISODE
 
 
+ResultT = TypeVar("ResultT", bound=SearchResponseResult)
+
+
 @dataclass
-class SearchResponseResultsResult(BaseDataClassORJSONMixin):
+class SearchResponseResultsResult(BaseDataClassORJSONMixin, Generic[ResultT]):
     """Represents the result object in the results array in the main response object from the podcast search API."""
 
-    results: list[SearchResponseResult]
+    results: list[ResultT]
     links: SearchResultLink | None = None
 
 
@@ -326,12 +329,12 @@ class SearchResponseResultsResult(BaseDataClassORJSONMixin):
 class SearchResponseResults(BaseDataClassORJSONMixin):
     """Represents the results object in the main response object from the podcast search API."""
 
-    channels: SearchResponseResultsResult
-    categories: SearchResponseResultsResult
-    series: SearchResponseResultsResult
-    episodes: SearchResponseResultsResult
-    contents: SearchResponseResultsResult
-    contributors: SearchResponseResultsResult
+    channels: SearchResponseResultsResult[SearchResponseResultChannel]
+    categories: SearchResponseResultsResult[SearchResponseResultCategory]
+    series: SearchResponseResultsResult[SearchResponseResultSeries | SearchResponseResultPodcast]
+    episodes: SearchResponseResultsResult[SearchResponseResultEpisode]
+    contents: SearchResponseResultsResult[SearchResponseResult]
+    contributors: SearchResponseResultsResult[SearchResponseResult]
 
 
 @dataclass
