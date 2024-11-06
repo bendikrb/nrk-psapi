@@ -26,7 +26,7 @@ format-check:
 
 .PHONY: docs
 docs:
-	$(run) sphinx-build docs docs/_build
+	$(run) cd docs; make html
 
 .PHONY: setup
 setup:

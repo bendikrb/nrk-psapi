@@ -52,10 +52,11 @@ class NrkPodcastFeed:
             for index_point in episode.index_points
         ]
 
-    async def build_episode_item(self, episode: Episode, series_data: PodcastSeries) -> Item | None:
+    async def build_episode_item(self, episode_id: str, series_data: PodcastSeries) -> Item | None:
         """Build a :class:`rfeed.rfeed.Item` for an episode."""
 
-        _LOGGER.debug("Building episode item: %s", episode.episode_id)
+        _LOGGER.debug("Building episode item: %s", episode_id)
+        episode = await self.api.get_episode(series_data.id, episode_id)
         manifest = await self.api.get_playback_manifest(episode.episode_id, podcast=True)
         episode_file = manifest.playable.assets[0] or None
         if episode_file is None:  # pragma: no cover
@@ -65,7 +66,7 @@ class NrkPodcastFeed:
         _LOGGER.debug("File stat: %s", file_stat)
 
         extensions = []
-        if episode.index_points:  # pragma: no cover
+        if episode.index_points:
             chapters_url = f"{self.base_url}/{series_data.id}/{episode.episode_id}/chapters.json"
             extensions.append(PodcastChapters(chapters_url, "application/json+chapters"))
 
@@ -142,7 +143,8 @@ class NrkPodcastFeed:
                     author="NRK",
                     # subtitle=(description[:255] + '..') if len(description) > 255 else description,
                     summary=podcast.series.titles.subtitle,
-                    explicit="clean",
+                    block=True,
+                    explicit=False,
                     owner=iTunesOwner(
                         name="NRK",
                         email="nrkpodcast@nrk.no",
@@ -153,7 +155,7 @@ class NrkPodcastFeed:
                 *extensions,
             ],
             items=[
-                await self.build_episode_item(episode, series_data=podcast.series) for episode in episodes
+                await self.build_episode_item(episode.episode_id, series_data=podcast.series) for episode in episodes
             ],
             **feed_attrs,
         )
