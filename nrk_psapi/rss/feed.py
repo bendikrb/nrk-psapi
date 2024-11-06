@@ -73,7 +73,7 @@ class NrkPodcastFeed:
             chapters_url = f"{self.base_url}/{series_data.id}/{episode.episode_id}/chapters.json"
             extensions.append(PodcastChapters(chapters_url, "application/json+chapters"))
 
-        if episode.season_id:
+        if episode.season_id and episode.season_id.isnumeric():
             extensions.append(PodcastSeason(int(episode.season_id), episode.season_title))
 
         if episode_image := get_image(episode.square_image):
