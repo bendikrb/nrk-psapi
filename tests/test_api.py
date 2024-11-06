@@ -885,7 +885,7 @@ async def test_http_error429(aresponses: ResponsesMockServer):
 async def test_network_error():
     """Test network error handling."""
     async with aiohttp.ClientSession() as session:
-        with patch.object(session, 'request', side_effect=socket.gaierror):
+        with patch.object(session, "request", side_effect=socket.gaierror):
             nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
             with pytest.raises(NrkPsApiConnectionError):
                 assert await nrk_api._request("ipcheck")

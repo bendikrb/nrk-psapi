@@ -24,6 +24,7 @@ from .extensions import (
     PodcastImages,
     PodcastImagesImage,
     PodcastPerson,
+    PodcastSeason,
 )
 
 if TYPE_CHECKING:
@@ -65,15 +66,26 @@ class NrkPodcastFeed:
         file_stat = await self.api.fetch_file_info(episode_file.url)
         _LOGGER.debug("File stat: %s", file_stat)
 
+        item_attrs = {}
+        itunes_attrs = {}
         extensions = []
         if episode.index_points:
             chapters_url = f"{self.base_url}/{series_data.id}/{episode.episode_id}/chapters.json"
             extensions.append(PodcastChapters(chapters_url, "application/json+chapters"))
 
+        if episode.season_id:
+            extensions.append(PodcastSeason(int(episode.season_id), episode.season_title))
+
+        if episode_image := get_image(episode.square_image):
+            extensions.append(
+                PodcastImages([PodcastImagesImage(i.url, i.width) for i in episode.square_image])
+            )
+            itunes_attrs["image"] = episode_image.url
+
         return Item(
             title=episode.titles.title,
             description=episode.titles.subtitle,
-            guid=Guid(episode.id, isPermaLink=False),
+            guid=Guid(episode.episode_id, isPermaLink=False),
             enclosure=Enclosure(
                 url=episode_file.url,
                 type=file_stat["content_type"],
@@ -89,9 +101,11 @@ class NrkPodcastFeed:
                 iTunesItem(
                     author=episode.contributors,
                     duration=episode.duration.total_seconds(),
+                    **itunes_attrs,
                 ),
                 *extensions,
             ],
+            **item_attrs,
         )
 
     async def build_podcast_rss(self, podcast_id: str, limit: int | None = None) -> Feed:
@@ -115,10 +129,10 @@ class NrkPodcastFeed:
         }
         itunes_attrs = {}
         extensions = [
-            PodcastImages([PodcastImagesImage(i.url, i.width) for i in podcast.series.image]),
+            PodcastImages([PodcastImagesImage(i.url, i.width) for i in podcast.series.square_image]),
         ]
 
-        if series_image := get_image(podcast.series.image):
+        if series_image := get_image(podcast.series.square_image):
             feed_attrs["image"] = Image(
                 url=series_image.url,
                 width=series_image.width,
@@ -155,7 +169,8 @@ class NrkPodcastFeed:
                 *extensions,
             ],
             items=[
-                await self.build_episode_item(episode.episode_id, series_data=podcast.series) for episode in episodes
+                await self.build_episode_item(episode.episode_id, series_data=podcast.series)
+                for episode in episodes
             ],
             **feed_attrs,
         )

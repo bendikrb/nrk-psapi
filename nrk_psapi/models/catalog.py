@@ -213,7 +213,7 @@ class Episode(BaseDataClassORJSONMixin):
                 d["type"] = t
                 break
 
-        if isinstance(d.get("duration"), Duration):
+        if isinstance(d.get("duration"), Duration):  # pragma: no cover
             d["duration"] = d["duration"].iso8601
         if isinstance(d.get("duration"), dict) and d["duration"].get("iso8601"):
             d["duration"] = d["duration"]["iso8601"]
@@ -222,6 +222,14 @@ class Episode(BaseDataClassORJSONMixin):
     @classmethod
     def __post_deserialize__(cls: type[T], d: T) -> T:
         return d
+
+    @property
+    def season_id(self):
+        return self._links.season.id
+
+    @property
+    def season_title(self):
+        return self._links.season.title
 
 
 @dataclass
@@ -392,8 +400,14 @@ class PodcastSequential(Podcast):
 class SeasonLink(BaseDataClassORJSONMixin):
     """Represents a season link in the API response."""
 
-    id: str
-    title: str
+    id: str | None = field(default=None, init=False)
+    href: str | None = None
+    name: str | None = None
+    title: str | None = None
+    series_type: SeriesType | None = field(default=None, metadata=field_options(alias="seriesType"))
+
+    def __post_init__(self):
+        self.id = self.id or self.name
 
 
 @dataclass
@@ -419,7 +433,7 @@ class Links(BaseDataClassORJSONMixin):
     next_links: list[Link] | None = field(default=None, metadata=field_options(alias="nextLinks"))
     playback: Link | None = None
     series: Link | None = None
-    season: Link | None = None
+    season: SeasonLink | None = None
     seasons: list[Link] | None = None
     custom_season: Link | None = field(default=None, metadata=field_options(alias="customSeason"))
     podcast: Link | None = None

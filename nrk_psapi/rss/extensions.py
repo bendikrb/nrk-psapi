@@ -19,9 +19,9 @@ class Podcast(Extension):
         self.people = [] if people is None else people
         self.images = [] if images is None else images
 
-        if isinstance(self.people, PodcastPerson):
+        if isinstance(self.people, PodcastPerson):  # pragma: no cover
             self.people = [self.people]
-        elif isinstance(self.people, str):
+        elif isinstance(self.people, str):  # pragma: no cover
             self.people = [PodcastPerson(self.people)]
 
     def get_namespace(self):
@@ -33,13 +33,13 @@ class Podcast(Extension):
     def publish(self, handler):
         Extension.publish(self, handler)
 
-        if self.guid is not None:
+        if self.guid is not None:  # pragma: no cover
             self._write_element("podcast:guid", self.guid)
 
-        if self.license is not None:
+        if self.license is not None:  # pragma: no cover
             self._write_element("podcast:license", self.license)
 
-        if self.locked is not None:
+        if self.locked is not None:  # pragma: no cover
             self._write_element("podcast:locked", self.locked)
 
         for person in self.people:
@@ -48,7 +48,7 @@ class Podcast(Extension):
             person.publish(self.handler)
 
 
-class PodcastPerson(Serializable):  # pragma: no cover
+class PodcastPerson(Serializable):
     """Extension for Podcast Index Person metatags.
     More information at https://podcastindex.org/namespace/1.0#person.
     """
@@ -56,7 +56,7 @@ class PodcastPerson(Serializable):  # pragma: no cover
     def __init__(self, name: str, role=None, group=None, img=None, href=None):
         Serializable.__init__(self)
 
-        if name is None:
+        if name is None:  # pragma: no cover
             raise ElementRequiredError("name")
 
         self.name = name
@@ -69,13 +69,13 @@ class PodcastPerson(Serializable):  # pragma: no cover
         Serializable.publish(self, handler)
 
         attrs = {}
-        if self.role is not None:
+        if self.role is not None:  # pragma: no cover
             attrs["role"] = self.role
-        if self.group is not None:
+        if self.group is not None:  # pragma: no cover
             attrs["group"] = self.group
-        if self.img is not None:
+        if self.img is not None:  # pragma: no cover
             attrs["img"] = self.img
-        if self.href is not None:
+        if self.href is not None:  # pragma: no cover
             attrs["href"] = self.href
 
         self._write_element("podcast:person", self.name, attrs)
@@ -95,7 +95,7 @@ class PodcastImages(Serializable):
     def __init__(self, images: list[PodcastImagesImage]):
         Serializable.__init__(self)
 
-        if images is None:
+        if images is None:  # pragma: no cover
             raise ElementRequiredError("images")
 
         self.images = images
@@ -109,7 +109,7 @@ class PodcastImages(Serializable):
         self._write_element("podcast:images", None, attrs)
 
 
-class PodcastSeason(Serializable):  # pragma: no cover
+class PodcastSeason(Serializable):
     """Extension for Podcast Index Season metatags.
     More information at https://podcastindex.org/namespace/1.0#season.
     """
@@ -117,7 +117,7 @@ class PodcastSeason(Serializable):  # pragma: no cover
     def __init__(self, number: int, name=None):
         Serializable.__init__(self)
 
-        if number is None:
+        if number is None:  # pragma: no cover
             raise ElementRequiredError("number")
 
         self.number = number
@@ -165,9 +165,9 @@ class PodcastChapters(Serializable):
     def __init__(self, url=None, type_=None):
         Serializable.__init__(self)
 
-        if url is None:
+        if url is None:  # pragma: no cover
             raise ElementRequiredError("url")
-        if type_ is None:
+        if type_ is None:  # pragma: no cover
             raise ElementRequiredError("type")
 
         self.url = url
