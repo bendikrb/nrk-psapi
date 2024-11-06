@@ -99,7 +99,6 @@ class NrkPodcastFeed:
                     else None,
                 ),
                 iTunesItem(
-                    author=episode.contributors,
                     duration=episode.duration.total_seconds(),
                     **itunes_attrs,
                 ),
