@@ -43,7 +43,7 @@ class Podcast(Extension):
             self._write_element("podcast:locked", self.locked)
 
         for person in self.people:
-            if isinstance(person, str):
+            if isinstance(person, str):  # pragma: no cover
                 person = PodcastPerson(person)  # noqa: PLW2901
             person.publish(self.handler)
 

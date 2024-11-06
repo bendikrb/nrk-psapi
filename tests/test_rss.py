@@ -13,6 +13,7 @@ from yarl import URL
 
 from nrk_psapi import NrkPodcastAPI, NrkPodcastFeed
 from nrk_psapi.const import PSAPI_BASE_URL
+from nrk_psapi.models.rss import EpisodeChapter  # noqa: TCH001
 
 from .helpers import load_fixture_json
 
@@ -107,6 +108,6 @@ async def test_build_rss_feed(aresponses: ResponsesMockServer, podcast_id: str):
 
         episode_id = episodes_fixture["_embedded"]["episodes"][0]["episodeId"]
         episode = await nrk_api.get_episode(podcast_id, episode_id)
-        chapters = await feed.build_episode_chapters(episode)
+        chapters: list[EpisodeChapter] = await feed.build_episode_chapters(episode)
         assert len(chapters) == 2
         assert all(isinstance(c, dict) for c in chapters)
