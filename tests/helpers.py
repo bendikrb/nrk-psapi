@@ -3,11 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from aiohttp.web_response import json_response
+from aresponses import ResponsesMockServer
 from aresponses.main import Route
 
 # noinspection PyProtectedMember
 from aresponses.utils import ANY, _text_matches_pattern
 import orjson
+from yarl import URL
+
+from nrk_psapi.auth.auth import OAUTH_AUTH_BASE_URL, OAUTH_LOGIN_BASE_URL
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
@@ -70,3 +75,93 @@ class CustomRoute(Route):  # pragma: no cover
             return False
 
         return True
+
+
+def setup_auth_mocks(aresponses: ResponsesMockServer):
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/web/login",
+        "GET",
+        aresponses.Response(
+            status=302,
+            headers={
+                "Location": "https://innlogging.nrk.no/connect/authorize?scope=openid+&response_type=code&client_id=radio.nrk.no.web&redirect_uri=https%3A%2F%2Fradio.nrk.no%2Fauth%2FsignInCallback&state=N7zlfSU&code_challenge=vq&code_challenge_method=S256&acr_values=encodedExitUrl%3Dhttps%253A%252F%252Fradio.nrk.no%252Fmittinnhold",
+            },
+        ),
+        repeat=float("inf"),
+    )
+    aresponses.add(
+        URL(OAUTH_AUTH_BASE_URL).host,
+        "/connect/authorize",
+        "GET",
+        aresponses.Response(
+            status=302,
+            headers={
+                "Location": "/logginn?returnUrl=%2Fconnect%2Fauthorize%2Fcallback%3Fscope%3Dopenid",
+            },
+        ),
+        repeat=float("inf"),
+    )
+    aresponses.add(
+        URL(OAUTH_AUTH_BASE_URL).host,
+        "/logginn",
+        "GET",
+        aresponses.Response(body="OK", content_type="text/html"),
+        repeat=float("inf"),
+    )
+
+    aresponses.add(
+        URL(OAUTH_AUTH_BASE_URL).host,
+        "/getHashingInstructions",
+        "POST",
+        json_response(data=load_fixture_json("auth_hashing_instructions")),
+        repeat=float("inf"),
+    )
+
+    aresponses.add(
+        URL(OAUTH_AUTH_BASE_URL).host,
+        "/logginn",
+        "POST",
+        json_response(data={"firstName": "Userus"}),
+        repeat=float("inf"),
+    )
+
+    aresponses.add(
+        URL(OAUTH_AUTH_BASE_URL).host,
+        "/connect/authorize/callback",
+        "GET",
+        aresponses.Response(
+            status=302,
+            headers={
+                "Location": "https://radio.nrk.no/auth/signInCallback?code=SVLdG1qB1iW7-KlJAYEBabfT",
+            },
+        ),
+        repeat=float("inf"),
+    )
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/signInCallback",
+        "GET",
+        aresponses.Response(
+            status=302,
+            headers={
+                "Location": "https://radio.nrk.no/mittinnhold",
+            },
+        ),
+        repeat=float("inf"),
+    )
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/mittinnhold",
+        "GET",
+        aresponses.Response(body="OK", content_type="text/html"),
+        repeat=float("inf"),
+    )
+
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/session/tokenforsub/_",
+        "POST",
+        json_response(data=load_fixture_json("auth_token")),
+        repeat=float("inf"),
+    )

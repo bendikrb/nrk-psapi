@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
+from pathlib import Path
 import socket
+from typing import TYPE_CHECKING
 
+import aiofiles
 from aiohttp.client import ClientError, ClientResponse, ClientResponseError, ClientSession
 from aiohttp.hdrs import METH_GET
 import async_timeout
 import orjson
+import platformdirs
 from yarl import URL
 
 from .__version__ import __version__
+from .auth import NrkAuthClient
 from .caching import cache, disable_cache, set_cache_dir
 from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
 from .exceptions import (
@@ -62,9 +67,16 @@ from .utils import (
     tiled_images,
 )
 
+if TYPE_CHECKING:
+    from os import PathLike
+
 
 @dataclass
 class NrkPodcastAPI:
+    auth_client: NrkAuthClient = field(default_factory=NrkAuthClient)
+    """auth_client (NrkAuthClient): The authentication client."""
+    disable_credentials_storage: bool = False
+    """Whether to disable credential storage."""
     user_agent: str | None = None
     """User agent string."""
     enable_cache: bool = True
@@ -80,6 +92,7 @@ class NrkPodcastAPI:
     session: ClientSession | None = None
     """Optional web session to use for requests."""
 
+    _conf_dir = platformdirs.user_config_dir(__package__, ensure_exists=True)
     _close_session: bool = False
 
     def __post_init__(self):
@@ -89,6 +102,43 @@ class NrkPodcastAPI:
 
         if self.cache_directory is not None:
             set_cache_dir(self.cache_directory)
+
+    async def save_credentials(self, filename: PathLike | None = None) -> None:
+        """Save the current authentication credentials to a file.
+
+        Args:
+            filename (PathLike | None): The file to save the credentials to.
+                If None, uses the default location.
+
+        """
+        if filename is None:
+            filename = Path(self._conf_dir) / "credentials.json"
+        filename = Path(filename).resolve()
+        credentials = self.auth_client.get_credentials()
+        if credentials is None:  # pragma: no cover
+            _LOGGER.warning("Tried to save non-existing credentials")
+            return
+        async with aiofiles.open(filename, "wb") as f:
+            await f.write(orjson.dumps(credentials))
+
+    async def load_credentials(self, filename: PathLike | None = None) -> None:
+        """Load authentication credentials from a file.
+
+        Args:
+            filename (PathLike | None): The file to load the credentials from.
+                If None, uses the default location.
+
+        """
+        if filename is None:
+            filename = Path(self._conf_dir) / "credentials.json"
+        filename = Path(filename).resolve()
+        if not filename.exists():
+            _LOGGER.warning("Credentials file does not exist: <%s>", filename)
+            return
+        async with aiofiles.open(filename) as f:
+            data = await f.read()
+            if data:
+                self.auth_client.set_credentials(data)
 
     @property
     def request_header(self) -> dict[str, str]:

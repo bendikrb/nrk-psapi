@@ -16,8 +16,10 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
+from rich.theme import Theme
 
 from nrk_psapi import NrkPodcastAPI, __version__
+from nrk_psapi.auth import NrkAuthClient
 from nrk_psapi.caching import cache_disabled, clear_cache
 from nrk_psapi.exceptions import NrkPsApiNotFoundError
 from nrk_psapi.models.catalog import (
@@ -36,7 +38,7 @@ from nrk_psapi.rss.feed import NrkPodcastFeed
 if TYPE_CHECKING:
     from nrk_psapi.models.common import BaseDataClassORJSONMixin
 
-console = Console(width=200)
+console = Console(width=200, theme=Theme({"error": "bold red", "success": "bold green", "info": "bold blue"}))
 
 
 # noinspection PyTypeChecker
@@ -305,6 +307,14 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     subparsers.required = True
 
     #
+    # Login
+    #
+    login_parser = subparsers.add_parser("login", description="Log in")
+    login_parser.add_argument("username", type=str, help="Username / E-mail")
+    login_parser.add_argument("password", type=str, help="Password")
+    login_parser.set_defaults(func=login)
+
+    #
     # Cache
     #
     cache_parser = subparsers.add_parser("cache_clear", description="Clear the cache.")
@@ -426,10 +436,18 @@ def _add_paging_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--page", type=int, default=1, help="The page number to return.")
 
 
+async def login(args):
+    """Login."""
+    async with NrkAuthClient() as client:
+        result = await client.authorize(args.username, args.password)
+        console.print(result.state, style="success")
+        console.print(result.session.access_token)
+
+
 async def cache_clear(_args):
     """Clear the cache."""
     clear_cache()
-    console.print("Cache cleared")
+    console.print("Cache cleared", style="info")
 
 
 async def browse(args):

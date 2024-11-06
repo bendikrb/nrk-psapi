@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from aresponses import ResponsesMockServer
 import pytest
 import scrypt
 
 from nrk_psapi.auth.utils import parse_hashing_algorithm
+
+from .helpers import setup_auth_mocks
 
 if TYPE_CHECKING:
     from nrk_psapi.auth.models import HashingRecipeDict
@@ -57,3 +60,13 @@ async def test_password_hashing(password: str, recipe: HashingRecipeDict, expect
     algo = parse_hashing_algorithm(recipe["algorithm"])
     hashed_password = scrypt.hash(password, recipe["salt"], algo["n"], algo["r"], algo["p"], algo["dkLen"])
     assert hashed_password.hex() == expected_hash
+
+
+async def test_authorize_success(
+    aresponses: ResponsesMockServer, nrk_default_auth_client, default_credentials, user_credentials
+):
+    setup_auth_mocks(aresponses)
+
+    async with nrk_default_auth_client() as auth_client:
+        credentials = await auth_client.authorize(user_credentials.email, user_credentials.password)
+        assert credentials == default_credentials
