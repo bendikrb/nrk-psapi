@@ -42,6 +42,8 @@ class NrkPodcastFeed:
     """API instance."""
     base_url: str = NRK_RADIO_BASE_URL
     """Base URL. Defaults to NRK_RADIO_BASE_URL."""
+    rss_url_suffix: str = ".xml"
+    """RSS URL suffix. Defaults to .xml."""
 
     @staticmethod
     async def build_episode_chapters(episode: Episode) -> list[EpisodeChapter]:
@@ -117,14 +119,15 @@ class NrkPodcastFeed:
         podcast = await self.api.get_podcast(podcast_id)
         _LOGGER.debug("Building RSS feed for %s (%s)", podcast_id, type(podcast))
 
-        episodes = await self.api.get_podcast_episodes(podcast.series.id, page_size=limit)
+        page = -1 if limit is None else None
+        episodes = await self.api.get_podcast_episodes(podcast.series.id, page_size=limit, page=page)
 
         _LOGGER.debug("Found %s episodes", len(episodes))
         if limit is not None:
             episodes = episodes[:limit]
 
         feed_attrs = {
-            "link": f"{self.base_url}/{podcast.series.id}",
+            "link": f"{self.base_url}/{podcast.series.id}{self.rss_url_suffix}",
         }
         itunes_attrs = {}
         extensions = [
