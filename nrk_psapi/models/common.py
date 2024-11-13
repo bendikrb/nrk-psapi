@@ -52,3 +52,17 @@ class FetchedFileInfo(TypedDict):
 
     content_length: int
     content_type: str | None
+
+
+class SortOrder(StrEnum):
+    """Sort order."""
+
+    ASCENDING = "ascending"
+    DESCENDING = "descending"
+
+
+@dataclass
+class Enabled(BaseDataClassORJSONMixin):
+    """Enabled status."""
+
+    enabled: bool

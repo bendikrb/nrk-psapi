@@ -1,10 +1,10 @@
 from .auth import NrkAuthClient
-from .models import NrkAuthData, NrkUserCredentials
+from .models import NrkAuthCredentials, NrkUserLoginDetails
 from .utils import parse_hashing_algorithm
 
 __all__ = [
     "NrkAuthClient",
-    "NrkAuthData",
-    "NrkUserCredentials",
+    "NrkAuthCredentials",
+    "NrkUserLoginDetails",
     "parse_hashing_algorithm",
 ]

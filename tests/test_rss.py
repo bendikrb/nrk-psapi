@@ -96,11 +96,15 @@ async def test_build_rss_feed(aresponses: ResponsesMockServer, podcast_id: str):
 
     async with ClientSession() as session:
         nrk_api = NrkPodcastAPI(session=session, enable_cache=False)
-        feed = NrkPodcastFeed(nrk_api, "http://example.com")
+        feed = NrkPodcastFeed(
+            nrk_api,
+            "http://example.com",
+            rss_url_suffix=".rss",
+        )
         rss = await feed.build_podcast_rss(podcast_id, limit=10)
 
         assert rss.title == "Tore Sagens podkast"
-        assert rss.link == f"http://example.com/{podcast_id}"
+        assert rss.link == f"http://example.com/{podcast_id}.rss"
         assert len(rss.items) == 10
 
         xml = rss.rss()

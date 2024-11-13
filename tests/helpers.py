@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from aiohttp.web_response import json_response
@@ -12,7 +13,13 @@ from aresponses.utils import ANY, _text_matches_pattern
 import orjson
 from yarl import URL
 
-from nrk_psapi.auth.auth import OAUTH_AUTH_BASE_URL, OAUTH_LOGIN_BASE_URL
+from nrk_psapi.auth.const import (
+    OAUTH_AUTH_BASE_URL,
+    OAUTH_LOGIN_BASE_URL,
+)
+
+if TYPE_CHECKING:
+    from nrk_psapi.auth import NrkAuthCredentials
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
@@ -71,13 +78,12 @@ class CustomRoute(Route):  # pragma: no cover
         if self.match_querystring and query_to_match != parsed_query:
             return False
 
-        if not _text_matches_pattern(self.method_pattern.lower(), request.method.lower()):  # noqa: SIM103
-            return False
-
-        return True
+        return _text_matches_pattern(self.method_pattern.lower(), request.method.lower())
 
 
-def setup_auth_mocks(aresponses: ResponsesMockServer):
+def setup_auth_mocks(aresponses: ResponsesMockServer, credentials: NrkAuthCredentials):
+    auth_cookies = load_fixture_json("auth_cookies")
+
     aresponses.add(
         URL(OAUTH_LOGIN_BASE_URL).host,
         "/auth/web/login",
@@ -138,16 +144,19 @@ def setup_auth_mocks(aresponses: ResponsesMockServer):
         ),
         repeat=float("inf"),
     )
+
+    mock_response = aresponses.Response(
+        status=302,
+        headers={
+            "Location": "https://radio.nrk.no/mittinnhold",
+        },
+    )
+    mock_response.set_cookie("nrk.login", auth_cookies["nrk.login"])
     aresponses.add(
         URL(OAUTH_LOGIN_BASE_URL).host,
         "/auth/signInCallback",
         "GET",
-        aresponses.Response(
-            status=302,
-            headers={
-                "Location": "https://radio.nrk.no/mittinnhold",
-            },
-        ),
+        mock_response,
         repeat=float("inf"),
     )
     aresponses.add(
@@ -155,6 +164,21 @@ def setup_auth_mocks(aresponses: ResponsesMockServer):
         "/mittinnhold",
         "GET",
         aresponses.Response(body="OK", content_type="text/html"),
+        repeat=float("inf"),
+    )
+
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/csrf_init",
+        "POST",
+        json_response(data={}),
+        repeat=float("inf"),
+    )
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/contextinfo",
+        "GET",
+        json_response(data={}),
         repeat=float("inf"),
     )
 

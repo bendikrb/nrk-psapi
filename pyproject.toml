@@ -81,9 +81,9 @@ source = ["nrk_psapi"]
 nrk = "nrk_psapi.cli:main"
 
 [tool.pytest.ini_options]
-addopts = "--cov"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+norecursedirs = ".svn _build tmp*"
 
 [tool.ruff]
 line-length = 110

@@ -1,7 +1,7 @@
 """Asynchronous Python client for the NRK Radio/Podcast APIs."""
 
 from .api import NrkPodcastAPI
-from .auth import NrkAuthClient, NrkUserCredentials
+from .auth import NrkAuthClient, NrkUserLoginDetails
 from .caching import clear_cache, disable_cache, get_cache
 from .exceptions import NrkPsApiError
 from .models.catalog import Episode, Podcast, Series
@@ -20,7 +20,7 @@ __all__ = [
     "NrkPodcastAPI",
     "NrkPodcastFeed",
     "NrkPsApiError",
-    "NrkUserCredentials",
+    "NrkUserLoginDetails",
     "Playable",
     "Podcast",
     "Series",

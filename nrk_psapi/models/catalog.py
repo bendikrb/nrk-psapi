@@ -447,6 +447,7 @@ class Links(BaseDataClassORJSONMixin):
     user_data: Link | None = field(default=None, metadata=field_options(alias="userData"))
     episodes: Link | None = None
     highlighted_episode: Link | None = field(default=None, metadata=field_options(alias="highlightedEpisode"))
+    highlighted_program: Link | None = field(default=None, metadata=field_options(alias="highlightedProgram"))
 
 
 @dataclass

@@ -14,7 +14,7 @@ import pytest
 from yarl import URL
 
 from nrk_psapi import NrkPodcastAPI
-from nrk_psapi.const import PSAPI_BASE_URL
+from nrk_psapi.const import NRK_RADIO_INTERACTION_BASE_URL, PSAPI_BASE_URL
 from nrk_psapi.exceptions import (
     NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
@@ -797,6 +797,27 @@ async def test_fetch_file_info(
 
     assert file_info["content_length"] == int(expected_content_length)
     assert file_info["content_type"] == expected_content_type
+
+
+@pytest.mark.parametrize(
+    ("podcast_id", "phone"),
+    [
+        ("desken_brenner", "12345678"),
+    ],
+)
+async def test_radio_interaction(aresponses: ResponsesMockServer, nrk_client, podcast_id: str, phone: str):
+    """Test radio interaction."""
+    aresponses.add(
+        URL(NRK_RADIO_INTERACTION_BASE_URL).host,
+        f"/submit/{podcast_id}",
+        "POST",
+        aresponses.Response(status=202),
+    )
+    async with nrk_client() as nrk_api:
+        nrk_api: NrkPodcastAPI
+        await nrk_api.send_message(podcast_id, "Test message", phone=phone)
+        with pytest.raises(NrkPsApiError):
+            await nrk_api.send_message(podcast_id, "")
 
 
 async def test_internal_session(aresponses: ResponsesMockServer):

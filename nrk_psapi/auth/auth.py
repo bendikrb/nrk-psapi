@@ -8,28 +8,39 @@ from aiohttp.client import ClientError, ClientResponseError, ClientSession
 import scrypt
 from yarl import URL
 
-from nrk_psapi.auth.models import HashingInstructions, NrkAuthData, NrkUserCredentials
+from nrk_psapi.auth.const import (
+    DEFAULT_USER_AGENT,
+    OAUTH_AUTH_BASE_URL,
+    OAUTH_CLIENT_ID,
+    OAUTH_LOGIN_BASE_URL,
+    OAUTH_RETURN_URL,
+)
+from nrk_psapi.auth.models import HashingInstructions, NrkAuthCredentials, NrkUserLoginDetails
 from nrk_psapi.auth.utils import parse_hashing_algorithm
 from nrk_psapi.const import LOGGER as _LOGGER
-from nrk_psapi.exceptions import NrkPsApiAuthenticationError, NrkPsApiConnectionTimeoutError
-
-OAUTH_LOGIN_BASE_URL = "https://radio.nrk.no"
-OAUTH_AUTH_BASE_URL = "https://innlogging.nrk.no"
-OAUTH_RETURN_URL = "https://radio.nrk.no/mittinnhold"
-OAUTH_CLIENT_ID = "radio.nrk.no.web"
+from nrk_psapi.exceptions import (
+    NrkPsApiAuthenticationError,
+    NrkPsApiConnectionTimeoutError,
+)
 
 
 @dataclass
 class NrkAuthClient:
-    user_agent: str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    user_agent: str = DEFAULT_USER_AGENT
 
     request_timeout: int = 15
     session: ClientSession | None = None
 
-    user_credentials: NrkUserCredentials | None = None
+    credentials: NrkAuthCredentials | None = None
+    login_details: NrkUserLoginDetails | None = None
 
-    _credentials: NrkAuthData | None = field(default=None, init=False)
+    _credentials: NrkAuthCredentials | None = field(default=None, init=False)
     _close_session: bool = False
+
+    def __post_init__(self):
+        """Initialize the client after dataclass initialization."""
+        if self.credentials is not None:
+            self.set_credentials(self.credentials)
 
     def get_credentials(self) -> dict | None:
         """Get the current credentials as a dictionary, or None if not set."""
@@ -37,26 +48,38 @@ class NrkAuthClient:
             return self._credentials.to_dict()
         return None  # pragma: no cover
 
-    def set_credentials(self, credentials: NrkAuthData | dict | str):
+    def set_credentials(self, credentials: NrkAuthCredentials | dict | str):
         """Set the credentials.
 
         Args:
-            credentials (NrkAuthData | dict | str): The credentials to set.
+            credentials (NrkAuthCredentials | dict | str): The credentials to set.
 
         """
-        if isinstance(credentials, NrkAuthData):
+        if isinstance(credentials, NrkAuthCredentials):
             self._credentials = credentials
         elif isinstance(credentials, dict):
-            self._credentials = NrkAuthData.from_dict(credentials)
+            self._credentials = NrkAuthCredentials.from_dict(credentials)
         else:
-            self._credentials = NrkAuthData.from_json(credentials)
+            self._credentials = NrkAuthCredentials.from_json(credentials)
 
     async def async_get_access_token(self) -> str:
         """Get access token."""
+        if self._credentials is None and self.login_details is None:
+            raise NrkPsApiAuthenticationError("No credentials or login details set")
+        if self._credentials is None:
+            try:
+                credentials = await self.authorize(self.login_details)
+            except NrkPsApiAuthenticationError as err:
+                raise NrkPsApiAuthenticationError("Unable to get access token") from err
+            self.set_credentials(credentials)
+
+        return self._credentials.access_token
+
+    async def get_user_id(self) -> str:
+        """Get user id."""
         if self._credentials is None:
             raise NrkPsApiAuthenticationError("No credentials set")
-        # TODO(@bendikrb): Check if token is still valid, implement refresh logic
-        return self._credentials.session.access_token
+        return self._credentials.session.user.sub
 
     @property
     def request_header(self) -> dict[str, str]:
@@ -143,16 +166,45 @@ class NrkAuthClient:
         ) as response:
             await response.text()
 
-        # Fetch token
+        return await self.token_for_sub()
+
+    async def token_for_sub(self, sub: str | None = None) -> dict:
+        """Get token for sub."""
         async with self.session.post(
-            self._build_url("auth/session/tokenforsub/_", OAUTH_LOGIN_BASE_URL),
+            self._build_url("auth/csrf_init", OAUTH_LOGIN_BASE_URL),
             headers=self.request_header,
             raise_for_status=True,
         ) as response:
-            return await response.json()
+            await response.json()
 
-    async def authorize(self, auth_email: str, auth_password: str):
+        async with self.session.get(
+            self._build_url("auth/contextinfo", OAUTH_LOGIN_BASE_URL),
+        ) as response:
+            await response.json()
+
+        headers = self.request_header
+        if sub is None:
+            sub = "_"
+        elif self._credentials is not None:
+            headers.update(self._credentials.authenticated_headers())
+
+        # Fetch token
+        async with self.session.post(
+            self._build_url(f"auth/session/tokenforsub/{sub}", OAUTH_LOGIN_BASE_URL),
+            headers=headers,
+            raise_for_status=True,
+        ) as response:
+            credentials = await response.json()
+
+        cookies = self.session.cookie_jar.filter_cookies(OAUTH_LOGIN_BASE_URL)
+        credentials["nrk_login"] = cookies.get("nrk.login").value
+        return credentials
+
+    async def authorize(self, login_details: NrkUserLoginDetails) -> NrkAuthCredentials:
         """Authorize."""
+        auth_email = login_details.email
+        auth_password = login_details.password
+
         try:
             callback_url = await self._get_callback_url()
             hashing_instructions = await self._get_hashing_instructions(auth_email)
@@ -160,7 +212,7 @@ class NrkAuthClient:
 
             callback_params = dict(callback_url.query)
             auth_data = await self._finalize_login(callback_params)
-            return NrkAuthData.from_dict(auth_data)
+            return NrkAuthCredentials.from_dict(auth_data)
         except TimeoutError as exception:
             raise NrkPsApiConnectionTimeoutError("Timed out while waiting for server response") from exception
         except (ClientError, ClientResponseError) as err:

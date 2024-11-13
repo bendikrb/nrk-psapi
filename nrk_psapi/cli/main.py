@@ -12,10 +12,11 @@ from rich.logging import RichHandler
 from rich.syntax import Syntax
 from rich.theme import Theme
 
-from nrk_psapi import NrkPodcastAPI, __version__
+from nrk_psapi import NrkPodcastAPI, NrkUserLoginDetails, __version__
 from nrk_psapi.auth import NrkAuthClient
 from nrk_psapi.caching import cache_disabled, clear_cache
 from nrk_psapi.cli.utils import (
+    _get_client,
     csv_to_list,
     header_panel,
     pretty_dataclass,
@@ -168,6 +169,16 @@ def main_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     search_parser.set_defaults(func=search)
     _add_paging_arguments(search_parser)
 
+    #
+    # Send message
+    #
+    send_message_parser = subparsers.add_parser("send-message", description="Send message.")
+    send_message_parser.add_argument("message", type=str, help="Message.")
+    send_message_parser.add_argument("--podcast_id", type=str, required=True, help="Podcast ID.")
+    send_message_parser.add_argument("--anonymous", action="store_true", help="Send anonymously.")
+    send_message_parser.add_argument("--phone", type=str, default=None, help="Phone number.")
+    send_message_parser.set_defaults(func=send_message)
+
     return parser
 
 
@@ -185,7 +196,7 @@ def _add_paging_arguments(parser: argparse.ArgumentParser) -> None:
 async def login(args):
     """Login."""
     async with NrkAuthClient() as client:
-        result = await client.authorize(args.username, args.password)
+        result = await client.authorize(NrkUserLoginDetails(args.username, args.password))
         console.print(result.state, style="success")
         console.print(result.session.access_token)
 
@@ -738,6 +749,17 @@ async def search(args):
                         ],
                     ),
                 )
+
+
+async def send_message(args):
+    """Send message."""
+    async with _get_client(args) as client:
+        console.print(
+            f"Sending {"anonymous" if args.anonymous else "non-anonymous"} message to [bold]{args.podcast_id}[/bold]:"
+        )
+        console.print(f"Using phone number: [bold]{args.phone}[/bold]")
+        console.print(f"Message: [bold]{args.message}[/bold]")
+        await client.send_message(args.podcast_id, args.message, anonymous=args.anonymous, phone=args.phone)
 
 
 def main():

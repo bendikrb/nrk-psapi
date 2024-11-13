@@ -8,6 +8,7 @@ from aresponses import ResponsesMockServer
 import pytest
 import scrypt
 
+from nrk_psapi import NrkAuthClient
 from nrk_psapi.auth.utils import parse_hashing_algorithm
 
 from .helpers import setup_auth_mocks
@@ -62,11 +63,26 @@ async def test_password_hashing(password: str, recipe: HashingRecipeDict, expect
     assert hashed_password.hex() == expected_hash
 
 
-async def test_authorize_success(
-    aresponses: ResponsesMockServer, nrk_default_auth_client, default_credentials, user_credentials
-):
-    setup_auth_mocks(aresponses)
-
+async def test_async_get_access_token_with_valid_credentials(nrk_default_auth_client, default_credentials):
     async with nrk_default_auth_client() as auth_client:
-        credentials = await auth_client.authorize(user_credentials.email, user_credentials.password)
+        access_token = await auth_client.async_get_access_token()
+        assert access_token == default_credentials.access_token
+
+    async with NrkAuthClient(credentials=default_credentials) as auth_client:
+        access_token = await auth_client.async_get_access_token()
+        assert access_token == default_credentials.access_token
+
+
+async def test_authorize_success(
+    aresponses: ResponsesMockServer, nrk_default_auth_client, default_credentials, default_login_details
+):
+    setup_auth_mocks(aresponses, default_credentials)
+    default_credentials_dict = default_credentials.to_dict()
+
+    async with nrk_default_auth_client(load_default_credentials=False) as auth_client:
+        token = await auth_client.async_get_access_token()
+        credentials = auth_client.get_credentials()
+        assert credentials == default_credentials_dict
+        assert token == default_credentials.access_token
+        credentials = await auth_client.authorize(default_login_details)
         assert credentials == default_credentials

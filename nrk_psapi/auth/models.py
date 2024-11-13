@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import NotRequired, TypedDict, get_type_hints
 
 from mashumaro import field_options
@@ -11,7 +12,7 @@ from nrk_psapi.models.common import StrEnum
 
 
 @dataclass
-class NrkUserCredentials:
+class NrkUserLoginDetails:
     """Represents user's login details for NRK authentication."""
 
     email: str
@@ -83,7 +84,6 @@ class LoginFlowState(DataClassORJSONMixin):
     encoded_redirect_url: str = field(metadata=field_options(alias="encodedRedirectUrl"))
     client_id: str = field(metadata=field_options(alias="clientId"))
     protected_login_context_url: str = field(metadata=field_options(alias="protectedLoginContextUrl"))
-    # started_time: int = field(metadata=field_options(alias="startedTime"))
     exit_url: str = field(metadata=field_options(alias="exitUrl"))
     new_user_hash_algorithm: str = field(metadata=field_options(alias="newUserHashAlgorithm"))
     new_user_hash_salt: str = field(metadata=field_options(alias="newUserHashSalt"))
@@ -162,7 +162,13 @@ class NrkUser(DataClassORJSONMixin):
 @dataclass
 class LoginSession(DataClassORJSONMixin):
     user: NrkUser
-    server_epoch_expiry: int = field(metadata=field_options(alias="serverEpochExpiry"))
+    server_epoch_expiry: datetime = field(
+        metadata=field_options(
+            alias="serverEpochExpiry",
+            deserialize=lambda x: datetime.fromtimestamp(x, tz=timezone.utc),
+            serialize=lambda x: x.timestamp(),
+        )
+    )
     expires_in: int = field(metadata=field_options(alias="expiresIn"))
     soft_expires_in: int = field(metadata=field_options(alias="softExpiresIn"))
     identities: list[NrkIdentity]
@@ -172,7 +178,24 @@ class LoginSession(DataClassORJSONMixin):
 
 
 @dataclass
-class NrkAuthData(DataClassORJSONMixin):
+class NrkAuthCredentials(DataClassORJSONMixin):
     session: LoginSession
     state: LoginState
     user_action: str | None = field(default=None, metadata=field_options(alias="userAction"))
+    nrk_login: str | None = None
+
+    @property
+    def access_token(self) -> str:
+        return self.session.access_token
+
+    @property
+    def id_token(self) -> str:
+        return self.session.id_token
+
+    def is_expired(self) -> bool:
+        return self.session.server_epoch_expiry < datetime.now(tz=timezone.utc)
+
+    def authenticated_headers(self):
+        return {
+            "authorization": f"Bearer {self.access_token}",
+        }

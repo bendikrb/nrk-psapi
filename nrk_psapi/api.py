@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from pathlib import Path
 import socket
@@ -11,16 +12,15 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 from aiohttp.client import ClientError, ClientResponse, ClientResponseError, ClientSession
-from aiohttp.hdrs import METH_GET
+from aiohttp.hdrs import METH_GET, METH_POST, METH_PUT
 import async_timeout
 import orjson
 import platformdirs
 from yarl import URL
 
-from .__version__ import __version__
 from .auth import NrkAuthClient
 from .caching import cache, disable_cache, set_cache_dir
-from .const import LOGGER as _LOGGER, PSAPI_BASE_URL
+from .const import LOGGER as _LOGGER, NRK_RADIO_INTERACTION_BASE_URL, PSAPI_BASE_URL
 from .exceptions import (
     NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
@@ -39,7 +39,8 @@ from .models.catalog import (
     SeriesType,
 )
 from .models.channels import Channel
-from .models.common import FetchedFileInfo, IpCheck
+from .models.common import FetchedFileInfo, IpCheck, SortOrder
+from .models.interaction import RadioMessage
 from .models.metadata import PodcastMetadata
 from .models.pages import (
     Curated,
@@ -61,11 +62,18 @@ from .models.search import (
     SeriesListItem,
     SingleLetter,
 )
+from .models.userdata import (
+    FavouriteLevel,
+    UserFavourite,
+    UserFavouriteNewEpisodesCountResponse,
+    UserFavouritesResponse,
+)
 from .utils import (
     fetch_file_info,
     get_nested_items,
     tiled_images,
 )
+from .version import __version__
 
 if TYPE_CHECKING:
     from os import PathLike
@@ -196,17 +204,20 @@ class NrkPodcastAPI:
             raise NrkPsApiNotFoundError("Resource not found")
         if response.status == HTTPStatus.BAD_REQUEST:
             raise NrkPsApiError("Bad request syntax or unsupported method")
-        if response.status != HTTPStatus.OK:
+        if not HTTPStatus(response.status).is_success:
             raise NrkPsApiError(response)
 
     async def _request(
         self,
         uri: str,
         method: str = METH_GET,
+        base_url: str | None = None,
         **kwargs,
     ) -> str | dict[any, any] | list[any] | None:
         """Make a request."""
-        url = URL(PSAPI_BASE_URL).join(URL(uri))
+        if base_url is None:
+            base_url = PSAPI_BASE_URL
+        url = URL(base_url).join(URL(uri))
         headers = kwargs.get("headers")
         headers = self.request_header if headers is None else dict(headers)
 
@@ -246,6 +257,8 @@ class NrkPodcastAPI:
             msg = f"Error occurred while communicating with NRK API: {exception}"
             raise NrkPsApiConnectionError(msg) from exception
 
+        if response.status in [HTTPStatus.NO_CONTENT, HTTPStatus.ACCEPTED]:
+            return None
         content_type = response.headers.get("Content-Type", "")
         text = await response.text()
         if "application/json" not in content_type:
@@ -260,6 +273,36 @@ class NrkPodcastAPI:
         """Check if IP is blocked."""
         result = await self._request("ipcheck")
         return IpCheck.from_dict(result["data"])
+
+    async def send_message(
+        self,
+        podcast_id: str,
+        message: str,
+        *,
+        anonymous: bool = False,
+        phone: str | None = None,
+    ) -> None:
+        """Send a message to a podcast.
+
+        Args:
+            podcast_id(str): Id of the podcast
+            message(str): Message to send
+            anonymous(bool, optional): Anonymous. Defaults to False.
+            phone(str, optional): Phone number. Defaults to None.
+
+        """
+        payload = RadioMessage(
+            anonymous=anonymous,
+            message=message,
+            phone=phone,
+            accept_terms=True,
+        )
+        await self._request(
+            f"submit/{podcast_id}",
+            method=METH_POST,
+            base_url=NRK_RADIO_INTERACTION_BASE_URL,
+            json=payload.to_dict(),
+        )
 
     @cache(ignore=(0,))
     async def get_playback_manifest(
@@ -548,6 +591,61 @@ class NrkPodcastAPI:
         )
         return Recommendation.from_dict(result)
 
+    async def count_new_favourited_episodes(
+        self,
+        favourite_level: FavouriteLevel | None = None,
+        since: datetime | None = None,
+    ):
+        """Count new episodes."""
+        if favourite_level is None:
+            favourite_level = FavouriteLevel.MANUAL_FAVOURITES
+        if since is None:
+            since = datetime.now(tz=timezone.utc) - timedelta(days=30)
+        user_id = self.auth_client.get_user_id()
+        result = await self._request(
+            f"radio/userdata/{user_id}/newepisodes/count",
+            params={
+                "favouriteLevel": favourite_level,
+                "since": since.isoformat().replace("+00:00", "Z"),
+            },
+        )
+        return UserFavouriteNewEpisodesCountResponse.from_dict(result)
+
+    # favouriteType=any&key=17097876000000000!-20&sortOrder=descending&pageSize=20
+    async def get_user_favorites(
+        self,
+        manual_only: bool = False,
+        sort_order: SortOrder = SortOrder.DESCENDING,
+        key: str | None = None,
+        page_size: int | None = None,
+    ):
+        """Get user favorites."""
+        if key is None:
+            key = datetime.now(tz=timezone.utc).timestamp()
+        user_id = self.auth_client.get_user_id()
+        result = await self._request(
+            f"radio/userdata/{user_id}/favourites",
+            params={
+                "sortOrder": sort_order,
+                "pageSize": page_size,
+                "key": key,
+                "favouriteType": "manual" if manual_only else "any",
+            },
+        )
+        return UserFavouritesResponse.from_dict(result)
+
+    async def add_user_favourite(self, item_type: str, item_id: str):
+        """Add user favourite."""
+        user_id = self.auth_client.get_user_id()
+        result = await self._request(
+            f"radio/userdata/{user_id}/favourites/{item_type}/{item_id}",
+            method=METH_PUT,
+            json={
+                "when": None,
+            },
+        )
+        return UserFavourite.from_dict(result)
+
     @cache(ignore=(0,))
     async def browse(
         self,
@@ -697,9 +795,13 @@ class NrkPodcastAPI:
         """Close open client session."""
         if self.session and self._close_session:
             await self.session.close()
+        if not self.disable_credentials_storage:
+            await self.save_credentials()
 
     async def __aenter__(self):
         """Async enter."""
+        if not self.disable_credentials_storage:
+            await self.load_credentials()
         return self
 
     async def __aexit__(self, *_exc_info: object) -> None:

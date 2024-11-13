@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import fields
 import re
 from typing import TYPE_CHECKING, Callable
@@ -10,6 +11,8 @@ from rich.box import SIMPLE
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+
+from nrk_psapi import NrkAuthClient, NrkPodcastAPI, NrkUserLoginDetails
 
 if TYPE_CHECKING:
     from nrk_psapi.models.common import BaseDataClassORJSONMixin
@@ -268,3 +271,18 @@ def single_letter(string):
 
 def csv_to_list(csv: str) -> list[str]:
     return [x.strip() for x in csv.split(",")]
+
+
+@contextlib.asynccontextmanager
+async def _get_client(args) -> NrkPodcastAPI:
+    """Return NrkPodcastAPI based on args."""
+    login_details = None
+    if hasattr(args, "username") and hasattr(args, "password"):
+        login_details = NrkUserLoginDetails(args.username, args.password)
+    auth_client = NrkAuthClient(login_details=login_details)
+    client = NrkPodcastAPI(auth_client=auth_client)
+    try:
+        await client.__aenter__()
+        yield client
+    finally:
+        await client.__aexit__(None, None, None)
