@@ -94,6 +94,12 @@ from .search import (
     SearchResultType,
     SeriesListItem,
 )
+from .userdata import (
+    FavouriteType,
+    UserFavourite,
+    UserFavouriteNewEpisodesCountResponse,
+    UserFavouritesResponse,
+)
 
 if TYPE_CHECKING:
     from .common import Operation
@@ -185,6 +191,7 @@ __all__ = [
     "Episode",
     "EpisodePlug",
     "EpisodeType",
+    "FavouriteType",
     "FetchedFileInfo",
     "get_operation",
     "Image",
@@ -253,4 +260,7 @@ __all__ = [
     "StandaloneProgramPlug",
     "Titles",
     "UsageRights",
+    "UserFavourite",
+    "UserFavouriteNewEpisodesCountResponse",
+    "UserFavouritesResponse",
 ]

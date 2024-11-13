@@ -81,7 +81,11 @@ class CustomRoute(Route):  # pragma: no cover
         return _text_matches_pattern(self.method_pattern.lower(), request.method.lower())
 
 
-def setup_auth_mocks(aresponses: ResponsesMockServer, credentials: NrkAuthCredentials):
+def setup_auth_mocks(
+    aresponses: ResponsesMockServer,
+    credentials: NrkAuthCredentials | None = None,
+    fail_login: bool = False,
+):
     auth_cookies = load_fixture_json("auth_cookies")
 
     aresponses.add(
@@ -124,13 +128,22 @@ def setup_auth_mocks(aresponses: ResponsesMockServer, credentials: NrkAuthCreden
         repeat=float("inf"),
     )
 
-    aresponses.add(
-        URL(OAUTH_AUTH_BASE_URL).host,
-        "/logginn",
-        "POST",
-        json_response(data={"firstName": "Userus"}),
-        repeat=float("inf"),
-    )
+    if fail_login:
+        aresponses.add(
+            URL(OAUTH_AUTH_BASE_URL).host,
+            "/logginn",
+            "POST",
+            json_response(data=load_fixture_json("auth_error"), status=400),
+            repeat=float("inf"),
+        )
+    else:
+        aresponses.add(
+            URL(OAUTH_AUTH_BASE_URL).host,
+            "/logginn",
+            "POST",
+            json_response(data={"firstName": "Userus"}),
+            repeat=float("inf"),
+        )
 
     aresponses.add(
         URL(OAUTH_AUTH_BASE_URL).host,

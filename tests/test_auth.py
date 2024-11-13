@@ -2,14 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
+import aiohttp
 from aresponses import ResponsesMockServer
 import pytest
 import scrypt
+from yarl import URL
 
-from nrk_psapi import NrkAuthClient
+from nrk_psapi import NrkAuthClient, NrkPodcastAPI
+from nrk_psapi.auth.const import OAUTH_LOGIN_BASE_URL
 from nrk_psapi.auth.utils import parse_hashing_algorithm
+from nrk_psapi.exceptions import (
+    NrkPsApiAuthenticationError,
+    NrkPsApiConnectionError,
+    NrkPsApiConnectionTimeoutError,
+    NrkPsApiError,
+)
 
 from .helpers import setup_auth_mocks
 
@@ -55,12 +65,32 @@ if TYPE_CHECKING:
             {"algorithm": "cscrypt:10:8:1:32", "salt": "xF9KfI+rD+EmWsAKLtsDPA=="},
             "21d9274fa6e9f9783b18727e0f8262c376553ac4f1c051a0a4229ec2033ba103",
         ),
+        (
+            "passord123",
+            {"algorithm": None},
+            "passord123",
+        ),
+        (
+            "passord321",
+            {"algorithm": "cleartext"},
+            "passord321",
+        ),
+        (
+            "passord321",
+            {"algorithm": "cscrypt:10:8:1"},
+            "passord321",
+        ),
     ],
 )
 async def test_password_hashing(password: str, recipe: HashingRecipeDict, expected_hash: str):
     algo = parse_hashing_algorithm(recipe["algorithm"])
-    hashed_password = scrypt.hash(password, recipe["salt"], algo["n"], algo["r"], algo["p"], algo["dkLen"])
-    assert hashed_password.hex() == expected_hash
+    if algo["algorithm"] == "cleartext":
+        assert password == expected_hash
+    else:
+        hashed_password = scrypt.hash(
+            password, recipe["salt"], algo["n"], algo["r"], algo["p"], algo["dkLen"]
+        )
+        assert hashed_password.hex() == expected_hash
 
 
 async def test_async_get_access_token_with_valid_credentials(nrk_default_auth_client, default_credentials):
@@ -71,6 +101,33 @@ async def test_async_get_access_token_with_valid_credentials(nrk_default_auth_cl
     async with NrkAuthClient(credentials=default_credentials) as auth_client:
         access_token = await auth_client.async_get_access_token()
         assert access_token == default_credentials.access_token
+
+
+async def test_async_get_access_token_with_no_credentials(nrk_client, nrk_default_auth_client):
+    async with nrk_client(load_default_credentials=False) as client:
+        client: NrkPodcastAPI
+        with pytest.raises(NrkPsApiAuthenticationError):
+            await client.auth_client.async_get_access_token()
+
+    async with nrk_default_auth_client(
+        load_default_credentials=False, load_default_login_details=False
+    ) as auth_client:
+        with pytest.raises(NrkPsApiAuthenticationError):
+            await auth_client.async_get_access_token()
+
+
+async def test_async_get_access_token_with_invalid_login_details(
+    aresponses: ResponsesMockServer, nrk_default_auth_client, invalid_login_details
+):
+    setup_auth_mocks(aresponses, invalid_login_details, fail_login=True)
+
+    async with nrk_default_auth_client(
+        login_details=invalid_login_details,
+        load_default_credentials=False,
+        load_default_login_details=False,
+    ) as auth_client:
+        with pytest.raises(NrkPsApiAuthenticationError):
+            await auth_client.async_get_access_token()
 
 
 async def test_authorize_success(
@@ -86,3 +143,39 @@ async def test_authorize_success(
         assert token == default_credentials.access_token
         credentials = await auth_client.authorize(default_login_details)
         assert credentials == default_credentials
+
+
+async def test_authorize_timeout(aresponses: ResponsesMockServer, nrk_default_auth_client):
+    """Test authorize timeout."""
+
+    # Faking a timeout by sleeping
+    async def response_handler(_: aiohttp.ClientResponse):
+        """Response handler for this test."""
+        await asyncio.sleep(2)
+
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/web/login",
+        "GET",
+        response_handler,
+        repeat=float("inf"),
+    )
+    async with nrk_default_auth_client(
+        load_default_credentials=False,
+        request_timeout=1,
+    ) as auth_client:
+        with pytest.raises((NrkPsApiConnectionError, NrkPsApiConnectionTimeoutError)):
+            await auth_client.async_get_access_token()
+
+
+async def test_authorize_unexpected_error(aresponses: ResponsesMockServer, nrk_default_auth_client):
+    """Test unexpected error handling."""
+    aresponses.add(
+        URL(OAUTH_LOGIN_BASE_URL).host,
+        "/auth/web/login",
+        "GET",
+        aresponses.Response(text="Error", status=418),
+    )
+    async with nrk_default_auth_client(load_default_credentials=False) as auth_client:
+        with pytest.raises(NrkPsApiError):
+            await auth_client.async_get_access_token()

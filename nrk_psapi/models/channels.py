@@ -14,7 +14,7 @@ def parse_duration(time_str: str):
     return timedelta(hours=int(time_parts[0]), minutes=int(time_parts[1]), seconds=int(time_parts[2]))
 
 
-def serialize_timedelta(duration: timedelta):
+def serialize_timedelta(duration: timedelta):  # pragma: no cover
     total_seconds = int(duration.total_seconds())
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from asyncio import TimeoutError
+import contextlib
 from dataclasses import dataclass, field
+from http import HTTPStatus
 from urllib.parse import quote_plus
 
-from aiohttp.client import ClientError, ClientResponseError, ClientSession
+from aiohttp.client import ClientError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout
 import scrypt
 from yarl import URL
 
@@ -20,7 +22,14 @@ from nrk_psapi.auth.utils import parse_hashing_algorithm
 from nrk_psapi.const import LOGGER as _LOGGER
 from nrk_psapi.exceptions import (
     NrkPsApiAuthenticationError,
+    NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
+    NrkPsApiError,
+    NrkPsApiNoCredentialsError,
+    NrkPsApiNoCredentialsOrLoginDetailsError,
+    NrkPsApiNotFoundError,
+    NrkPsApiRateLimitError,
+    NrkPsAuthorizationError,
 )
 
 
@@ -65,12 +74,15 @@ class NrkAuthClient:
     async def async_get_access_token(self) -> str:
         """Get access token."""
         if self._credentials is None and self.login_details is None:
-            raise NrkPsApiAuthenticationError("No credentials or login details set")
+            raise NrkPsApiNoCredentialsOrLoginDetailsError("No credentials or login details set")
         if self._credentials is None:
             try:
                 credentials = await self.authorize(self.login_details)
             except NrkPsApiAuthenticationError as err:
                 raise NrkPsApiAuthenticationError("Unable to get access token") from err
+            except NrkPsApiConnectionError as err:
+                _LOGGER.warning("Unable to get access token: %s", err)
+                raise
             self.set_credentials(credentials)
 
         return self._credentials.access_token
@@ -78,7 +90,7 @@ class NrkAuthClient:
     async def get_user_id(self) -> str:
         """Get user id."""
         if self._credentials is None:
-            raise NrkPsApiAuthenticationError("No credentials set")
+            raise NrkPsApiNoCredentialsError("No credentials set")
         return self._credentials.session.user.sub
 
     @property
@@ -90,7 +102,8 @@ class NrkAuthClient:
 
     def setup_session(self):
         if self.session is None:
-            self.session = ClientSession()
+            timeout = ClientTimeout(total=self.request_timeout)
+            self.session = ClientSession(timeout=timeout)
             _LOGGER.debug("New session created.")
             self._close_session = True
 
@@ -100,13 +113,35 @@ class NrkAuthClient:
             base_url = OAUTH_AUTH_BASE_URL
         return str(URL(base_url).join(URL(uri)))
 
+    @staticmethod
+    async def _request_check_status(response: ClientResponse):
+        content_type = response.headers.get("Content-Type", "")
+        error_msg = None
+        if "application/json" in content_type:
+            error = await response.json()
+            with contextlib.suppress(KeyError, IndexError, TypeError):
+                error_msg = error["errors"][0]["message"]
+
+        if response.status == HTTPStatus.TOO_MANY_REQUESTS:
+            raise NrkPsApiRateLimitError(error_msg or "Too many requests to NRK API. Try again later.")
+        if response.status == HTTPStatus.NOT_FOUND:
+            raise NrkPsApiNotFoundError("Resource not found")
+        if response.status == HTTPStatus.BAD_REQUEST:
+            raise NrkPsApiAuthenticationError(error_msg or "Bad request syntax or unsupported method")
+        if response.status == HTTPStatus.UNAUTHORIZED:
+            raise NrkPsAuthorizationError(error_msg or "Permission denied")
+        if response.status == HTTPStatus.FORBIDDEN:
+            raise NrkPsAuthorizationError(error_msg or "Authorization failed")
+        if not HTTPStatus(response.status).is_success:
+            raise NrkPsApiError(response)
+
     async def _get_hashing_instructions(self, email: str) -> HashingInstructions:
         """Fetch hashing instructions from the server."""
         async with self.session.post(
             self._build_url("getHashingInstructions"),
             json={"email": email},
             headers=self.request_header,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             data = await response.json()
             return HashingInstructions.from_dict(data)
@@ -119,7 +154,7 @@ class NrkAuthClient:
                 "returnUrl": OAUTH_RETURN_URL,
             },
             headers=self.request_header,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             return response.history[-1].url
 
@@ -151,7 +186,7 @@ class NrkAuthClient:
                 "encodedExitUrl": quote_plus(OAUTH_RETURN_URL),
             },
             headers=self.request_header,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             user_data = await response.json()
             _LOGGER.debug("Got user data: %s", user_data)
@@ -162,7 +197,7 @@ class NrkAuthClient:
             self._build_url("connect/authorize/callback"),
             params=params,
             headers=self.request_header,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             await response.text()
 
@@ -173,7 +208,7 @@ class NrkAuthClient:
         async with self.session.post(
             self._build_url("auth/csrf_init", OAUTH_LOGIN_BASE_URL),
             headers=self.request_header,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             await response.json()
 
@@ -192,7 +227,7 @@ class NrkAuthClient:
         async with self.session.post(
             self._build_url(f"auth/session/tokenforsub/{sub}", OAUTH_LOGIN_BASE_URL),
             headers=headers,
-            raise_for_status=True,
+            raise_for_status=self._request_check_status,
         ) as response:
             credentials = await response.json()
 
@@ -216,7 +251,7 @@ class NrkAuthClient:
         except TimeoutError as exception:
             raise NrkPsApiConnectionTimeoutError("Timed out while waiting for server response") from exception
         except (ClientError, ClientResponseError) as err:
-            raise NrkPsApiAuthenticationError("Authentication error") from err
+            raise NrkPsApiConnectionError("Unknown error during authentication") from err
 
     async def close(self) -> None:
         """Close open client session."""

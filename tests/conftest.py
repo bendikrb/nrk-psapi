@@ -88,12 +88,16 @@ async def nrk_default_auth_client(default_login_details, default_credentials):
     @contextlib.asynccontextmanager
     async def _nrk_auth_client(
         credentials: NrkAuthCredentials | None = None,
+        login_details: NrkUserLoginDetails | None = None,
         load_default_credentials: bool = True,
         load_default_login_details: bool = True,
+        **kwargs,
     ) -> NrkAuthClient:
-        auth_client = NrkAuthClient()
+        auth_client = NrkAuthClient(**kwargs)
 
-        if load_default_login_details:
+        if login_details is not None:
+            auth_client.login_details = login_details
+        elif load_default_login_details:
             auth_client.login_details = default_login_details
         if credentials is not None:
             auth_client.set_credentials(credentials)
@@ -112,6 +116,11 @@ async def nrk_default_auth_client(default_login_details, default_credentials):
 @pytest.fixture
 def default_login_details():
     return NrkUserLoginDetails(email="testuser@example.com", password="securepassword123")  # noqa: S106
+
+
+@pytest.fixture
+def invalid_login_details():
+    return NrkUserLoginDetails(email="testuser@fail.com", password="securepassword123")  # noqa: S106
 
 
 @pytest.fixture

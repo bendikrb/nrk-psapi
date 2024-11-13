@@ -16,6 +16,7 @@ from yarl import URL
 from nrk_psapi import NrkPodcastAPI
 from nrk_psapi.const import NRK_RADIO_INTERACTION_BASE_URL, PSAPI_BASE_URL
 from nrk_psapi.exceptions import (
+    NrkPsApiAuthenticationError,
     NrkPsApiConnectionError,
     NrkPsApiConnectionTimeoutError,
     NrkPsApiError,
@@ -30,6 +31,7 @@ from nrk_psapi.models import (
     CuratedSection,
     Episode,
     EpisodePlug,
+    FavouriteType,
     Included,
     IncludedSection,
     IpCheck,
@@ -61,9 +63,12 @@ from nrk_psapi.models import (
     SeriesPlug,
     SeriesType,
     StandaloneProgramPlug,
+    UserFavourite,
+    UserFavouriteNewEpisodesCountResponse,
+    UserFavouritesResponse,
 )
 
-from .helpers import CustomRoute, load_fixture_json
+from .helpers import CustomRoute, load_fixture_json, setup_auth_mocks
 
 logger = logging.getLogger(__name__)
 
@@ -818,6 +823,78 @@ async def test_radio_interaction(aresponses: ResponsesMockServer, nrk_client, po
         await nrk_api.send_message(podcast_id, "Test message", phone=phone)
         with pytest.raises(NrkPsApiError):
             await nrk_api.send_message(podcast_id, "")
+
+
+@pytest.mark.parametrize(
+    "user_id",
+    [
+        "382cb4d7-aaaa-aaaa-aaaa-000000000000",
+    ],
+)
+async def test_get_user_favorites(aresponses: ResponsesMockServer, nrk_client, user_id):
+    """Test get user favorites."""
+    setup_auth_mocks(aresponses)
+
+    aresponses.add(
+        URL(PSAPI_BASE_URL).host,
+        f"/radio/userdata/{user_id}/favourites",
+        "GET",
+        json_response(data=load_fixture_json("radio_userdata_favourites")),
+    )
+
+    async with nrk_client() as nrk_api:
+        nrk_api: NrkPodcastAPI
+        favourites = await nrk_api.get_user_favorites()
+        assert isinstance(favourites, UserFavouritesResponse)
+
+
+@pytest.mark.parametrize(
+    "user_id",
+    [
+        "382cb4d7-aaaa-aaaa-aaaa-000000000000",
+    ],
+)
+async def test_count_new_favourited_episodes(aresponses: ResponsesMockServer, nrk_client, user_id):
+    """Test count new favourited episodes."""
+    aresponses.add(
+        URL(PSAPI_BASE_URL).host,
+        f"/radio/userdata/{user_id}/newepisodes/count",
+        "GET",
+        json_response(data={"count": 50, "since": "0001-01-01T00:00:00Z"}),
+    )
+    async with nrk_client() as nrk_api:
+        nrk_api: NrkPodcastAPI
+        result = await nrk_api.count_new_favourited_episodes()
+        assert isinstance(result, UserFavouriteNewEpisodesCountResponse)
+        assert result.count == 50
+
+
+@pytest.mark.parametrize(
+    ("user_id", "item_type", "item_id"),
+    [
+        ("382cb4d7-aaaa-aaaa-aaaa-000000000000", "series", "distriktsprogram-troendelag"),
+    ],
+)
+async def test_add_user_favourite(aresponses: ResponsesMockServer, nrk_client, user_id, item_type, item_id):
+    """Test add user favourite."""
+    aresponses.add(
+        URL(PSAPI_BASE_URL).host,
+        f"/radio/userdata/{user_id}/favourites/{item_type}/{item_id}",
+        "PUT",
+        json_response(data=load_fixture_json("radio_userdata_favourite")),
+    )
+    async with nrk_client() as nrk_api:
+        nrk_api: NrkPodcastAPI
+        result = await nrk_api.add_user_favourite(FavouriteType(item_type), item_id)
+        assert isinstance(result, UserFavourite)
+
+
+async def test_no_user_id(nrk_client):
+    """Test get user favorites."""
+    async with nrk_client(load_default_credentials=False) as nrk_api:
+        nrk_api: NrkPodcastAPI
+        with pytest.raises(NrkPsApiAuthenticationError):
+            await nrk_api.get_user_favorites()
 
 
 async def test_internal_session(aresponses: ResponsesMockServer):

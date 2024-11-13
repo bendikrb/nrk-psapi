@@ -27,6 +27,7 @@ from .exceptions import (
     NrkPsApiError,
     NrkPsApiNotFoundError,
     NrkPsApiRateLimitError,
+    NrkPsAuthorizationError,
 )
 from .models.catalog import (
     Episode,
@@ -64,6 +65,7 @@ from .models.search import (
 )
 from .models.userdata import (
     FavouriteLevel,
+    FavouriteType,
     UserFavourite,
     UserFavouriteNewEpisodesCountResponse,
     UserFavouritesResponse,
@@ -204,6 +206,8 @@ class NrkPodcastAPI:
             raise NrkPsApiNotFoundError("Resource not found")
         if response.status == HTTPStatus.BAD_REQUEST:
             raise NrkPsApiError("Bad request syntax or unsupported method")
+        if response.status == HTTPStatus.FORBIDDEN:
+            raise NrkPsAuthorizationError("Authorization failed")
         if not HTTPStatus(response.status).is_success:
             raise NrkPsApiError(response)
 
@@ -601,7 +605,7 @@ class NrkPodcastAPI:
             favourite_level = FavouriteLevel.MANUAL_FAVOURITES
         if since is None:
             since = datetime.now(tz=timezone.utc) - timedelta(days=30)
-        user_id = self.auth_client.get_user_id()
+        user_id = await self.auth_client.get_user_id()
         result = await self._request(
             f"radio/userdata/{user_id}/newepisodes/count",
             params={
@@ -622,7 +626,7 @@ class NrkPodcastAPI:
         """Get user favorites."""
         if key is None:
             key = datetime.now(tz=timezone.utc).timestamp()
-        user_id = self.auth_client.get_user_id()
+        user_id = await self.auth_client.get_user_id()
         result = await self._request(
             f"radio/userdata/{user_id}/favourites",
             params={
@@ -634,9 +638,9 @@ class NrkPodcastAPI:
         )
         return UserFavouritesResponse.from_dict(result)
 
-    async def add_user_favourite(self, item_type: str, item_id: str):
+    async def add_user_favourite(self, item_type: FavouriteType, item_id: str):
         """Add user favourite."""
-        user_id = self.auth_client.get_user_id()
+        user_id = await self.auth_client.get_user_id()
         result = await self._request(
             f"radio/userdata/{user_id}/favourites/{item_type}/{item_id}",
             method=METH_PUT,
