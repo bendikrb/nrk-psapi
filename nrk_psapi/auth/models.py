@@ -60,46 +60,6 @@ class HashingInstructions(DataClassORJSONMixin):
     next: HashingRecipe | None
 
 
-@dataclass
-class CSRF(DataClassORJSONMixin):
-    name: str
-    value: str
-
-
-@dataclass
-class LoginModel(DataClassORJSONMixin):
-    csrf: CSRF = field(metadata=field_options(alias="csrf"))
-    login_url: str = field(metadata=field_options(alias="loginUrl"))
-    redirect_url: str = field(metadata=field_options(alias="redirectUrl"))
-    client_side_hashing_recipe: HashingRecipe = field(metadata=field_options(alias="clientSideHashingRecipe"))
-    client_id: str = field(metadata=field_options(alias="clientId"))
-    protected_login_context_url: str = field(metadata=field_options(alias="protectedLoginContextUrl"))
-
-
-@dataclass
-class LoginFlowState(DataClassORJSONMixin):
-    add_user: bool = field(metadata=field_options(alias="addUser"))
-    terms_to_accept: str = field(metadata=field_options(alias="termsToAccept"))
-    redirect_url: str = field(metadata=field_options(alias="redirectUrl"))
-    encoded_redirect_url: str = field(metadata=field_options(alias="encodedRedirectUrl"))
-    client_id: str = field(metadata=field_options(alias="clientId"))
-    protected_login_context_url: str = field(metadata=field_options(alias="protectedLoginContextUrl"))
-    exit_url: str = field(metadata=field_options(alias="exitUrl"))
-    new_user_hash_algorithm: str = field(metadata=field_options(alias="newUserHashAlgorithm"))
-    new_user_hash_salt: str = field(metadata=field_options(alias="newUserHashSalt"))
-    model: LoginModel
-    username: str | None = field(default=None, metadata=field_options(alias="username"))
-    terms_addons_to_accept: str | None = field(
-        default=None, metadata=field_options(alias="termsAddonsToAccept")
-    )
-    show_login_confirmation: bool | None = field(
-        default=None, metadata=field_options(alias="showLoginConfirmation")
-    )
-    registration_context: str | None = field(
-        default=None, metadata=field_options(alias="registrationContext")
-    )
-
-
 HashingRecipeDict = TypedDictFunc("HashingRecipeDict", dict(get_type_hints(HashingRecipe).items()))  # noqa: UP013
 
 
