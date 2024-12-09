@@ -2,6 +2,7 @@
 
 [![GitHub Release][releases-shield]][releases]
 [![Python Versions][py-versions-shield]][py-versions]
+[![PyPI Downloads][downloads-shield]][downloads]
 ![Project Maintenance][maintenance-shield]
 [![License][license-shield]](LICENSE.md)
 ![Made with Love in Norway][madewithlove-shield]
@@ -94,3 +95,5 @@ If you have any questions or need assistance with the library, you can contact t
 [codecov-shield]: https://codecov.io/gh/bendikrb/nrk-psapi/graph/badge.svg?token=011O5N9MKL
 [codecov]: https://codecov.io/gh/bendikrb/nrk-psapi
 [madewithlove-shield]: https://madewithlove.now.sh/no?heart=true&colorB=%233584e4
+[downloads-shield]: https://img.shields.io/pypi/dm/nrk-psapi?style=flat
+[downloads]: https://pypistats.org/packages/nrk-psapi
